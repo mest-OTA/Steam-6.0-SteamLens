@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SteamLens · Steam 透镜</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/offline-data.js"></script>
+<script src="assets/offline.js"></script>
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true">
+  <span class="orb orb-a"></span><span class="orb orb-b"></span>
+  <span class="orb orb-c"></span><span class="orb orb-d"></span>
+  <div class="grain"></div>
+</div>
+
+<div class="app">
+  <aside class="sidebar glass">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
+          <circle cx="20" cy="20" r="18" fill="none" stroke="url(#bg)" stroke-width="2" opacity=".65"/>
+          <circle cx="20" cy="20" r="10.5" fill="none" stroke="url(#bg)" stroke-width="2.6"/>
+          <circle cx="20" cy="20" r="3.4" fill="url(#bg)"/>
+          <path d="M28.6 11.4 L32.5 7.5" stroke="url(#bg)" stroke-width="2.6" stroke-linecap="round"/>
+          <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#2f7bff"/><stop offset=".55" stop-color="#7a63f5"/><stop offset="1" stop-color="#17b8a6"/>
+          </linearGradient></defs>
+        </svg>
+      </div>
+      <div class="brand-text"><b>SteamLens</b><small>STEAM 透镜 · 本地统计</small></div>
+      <span id="offlineBadge" class="tag" hidden style="margin-left:10px">离线版</span>
+    </div>
+
+    <div class="account-card" id="accountCard" title="点我切换 / 管理账号">
+      <div class="avatar" id="avatar">S</div>
+      <div class="account-meta"><b id="accountName">正在读取…</b><small id="accountId">本机 Steam 账号</small></div>
+      <span class="ac-caret">▾</span>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button class="nav-item active" data-page="overview"><i>◈</i><span>总览</span></button>
+      <button class="nav-item" data-page="games"><i>▤</i><span>游戏库</span><em id="navGames">0</em></button>
+      <button class="nav-item" data-page="friends"><i>◉</i><span>好友上线</span><em id="navFriends">0</em></button>
+      <button class="nav-item" data-page="private"><i>◐</i><span>隐私与隐藏</span><em id="navPrivate">0</em></button>
+      <button class="nav-item" data-page="value"><i>¥</i><span>库价值</span></button>
+      <button class="nav-item" data-page="watch"><i>♡</i><span>愿望单</span><em id="navWatch">0</em></button>
+      <button class="nav-item" data-page="syscheck"><i>🖥</i><span>系统对比</span></button>
+      <button class="nav-item" data-page="family"><i>👪</i><span>识别家庭</span></button>
+      <button class="nav-item" data-page="progress"><i>↗</i><span>进度与快照</span></button>
+      <button class="nav-item" data-page="account"><i>◎</i><span>Steam 账号</span><em id="navAccount">未连接</em></button>
+      <button class="nav-item" data-page="browser"><i>⌕</i><span>浏览器扫描</span><em id="navBrowser">—</em></button>
+      <button class="nav-item" data-page="notify"><i>✉</i><span>通知与邮箱</span><em id="navMail">—</em></button>
+      <button class="nav-item" data-page="export"><i>⇩</i><span>导出 / 交给 AI</span></button>
+      <button class="nav-item" data-page="connect"><i>⌘</i><span>连接与配对</span></button>
+      <button class="nav-item" data-page="settings"><i>⚙</i><span>设置保存</span><em id="navSettings">永久</em></button>
+      <button class="nav-item" data-page="wallpaper"><i>▣</i><span>动态壁纸</span><em id="navWallpaper">—</em></button>
+      <button class="nav-item" data-page="updates"><i>⟳</i><span>更新</span><em id="navUpdates">60s</em></button>
+    </nav>
+
+    <div class="side-foot">
+      <div class="local-dot"></div>
+      <div><b>仅本机运行</b><small>127.0.0.1 · 数据不上传</small></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar glass">
+      <div class="crumbs">
+        <h1 id="pageTitle">总览</h1>
+        <p id="pageSub">你的 Steam 全景视图</p>
+      </div>
+      <div class="mode-switch" id="modeSwitch" role="tablist">
+        <button data-mode="auto" class="active"><span class="pulse"></span>自动连接 Steam</button>
+        <button data-mode="manual">手动连接 Steam</button>
+      </div>
+      <div class="top-actions">
+        <div class="save-state" id="saveState" title="所有改动自动保存到本机，重启不丢"><span class="save-dot"></span><span id="saveStateText">已自动保存</span></div>
+        <div class="badge" id="statusBadge"><span class="dot ok"></span><span>本地就绪</span></div>
+        <button class="icon-btn" id="btnTheme" title="切换深浅主题">◑</button>
+        <button class="icon-btn primary" id="btnRefresh" title="重新扫描">↻</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- 离线接管：在线版起不来时，由离线版代为弹出 / 转发通知 -->
+      <div class="card glass pad offline-takeover" id="offlineTakeover" hidden>
+        <div class="card-head">
+          <h2>离线接管 · 通知不会丢</h2>
+          <span class="tag warn" id="takeoverTag">在线版未启动</span>
+        </div>
+        <p class="ot-desc">
+          检测到 <b>在线版（本地服务）没有运行</b>。下面这些是服务器停止前记录的最近通知。
+          你可以让<b>离线版直接把它们弹到桌面</b>，或<b>一键转发到你自己的 Webhook</b>（QQ / 邮箱）——
+          这样即使在线版打不开，消息也会送到你手上。
+        </p>
+        <div class="ot-actions">
+          <button class="btn primary" id="btnTakeoverDesktop">在桌面弹出这些通知</button>
+          <input class="input" id="takeoverWebhook" placeholder="可选：你的 Webhook 完整 URL（收到 {title, body}）" style="flex:1;min-width:220px" />
+          <button class="btn" id="btnTakeoverForward">转发到 Webhook</button>
+        </div>
+        <div class="ot-hint" id="takeoverHint"></div>
+        <div class="mini-list" id="takeoverList"></div>
+      </div>
+
+      <!-- 总览 -->
+      <section class="page active" id="page-overview">
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="grid-2">
+          <div class="card glass pad">
+            <div class="card-head"><h2>时长构成</h2><span class="tag" id="donutTag">按游戏</span>
+              <button class="btn ghost tiny" id="btnPlaytimeMore" style="margin-left:auto">更多 › 全部游戏时长</button></div>
+            <div class="donut-wrap"><div id="donut"></div><div id="donutLegend" class="legend"></div></div>
+            <p class="fine" id="playtimeSyncNote" style="margin-top:8px">Steam 客户端时长：每小时全量重提取一次 · 总览每分钟刷新</p>
+            <div id="playtimeAll" hidden style="margin-top:10px">
+              <div class="inline-row">
+                <input id="playtimeSearch" placeholder="搜游戏名或 AppID…" autocomplete="off">
+                <label class="switch"><input type="checkbox" id="playtimeOnlyPlayed" checked><span></span><b>只看玩过的</b></label>
+              </div>
+              <p class="fine" id="playtimeAllHint" style="margin:8px 0"></p>
+              <div id="playtimeAllList" class="mini-list"></div>
+            </div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>时长排行</h2><span class="tag">TOP 8</span></div>
+            <div id="topBars" class="bars"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card glass pad">
+            <div class="card-head"><h2>最近动态</h2><span class="tag" id="deltaTag">—</span></div>
+            <div id="recentList" class="recent-list"></div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>数据来源 · 透明可查</h2><span class="tag">LOCAL FIRST</span></div>
+            <div id="sourceList" class="source-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 游戏库 -->
+      <section class="page" id="page-games">
+        <div class="card glass pad">
+          <div class="card-head"><h2>浏览器扫描 · 已拥有的游戏 / 愿望单 / 购物车</h2><div class="inline-row"><span class="tag" id="browserLibTag">每秒同步</span><button class="btn ghost tiny" id="btnBlRefreshMeta">⟳ 补全名字 / 封面</button></div></div>
+          <p class="fine">每款游戏都带<b>封面图、游戏名、AppID</b>。Steam 商店有时只给 AppID，服务会自动补全中文名和封面并永久缓存（点右上按钮可重试）。<b>点任意一行</b>即可打开这个游戏的<b>玩法</b>与<b>我的成就</b>；下方「游戏库」表格里的游戏同样可以点开。愿望单里的游戏也能在「愿望单」页一键加入降价 / 上线监控。</p>
+          <div class="grid-3">
+            <div class="card glass pad"><div class="card-head"><h2>已拥有的游戏</h2><span class="tag" id="blOwnedTag">0</span></div><div id="blOwned" class="mini-list scroll-list"></div></div>
+            <div class="card glass pad"><div class="card-head"><h2>愿望单</h2><span class="tag" id="blWishTag">0</span></div><div id="blWish" class="mini-list scroll-list"></div></div>
+            <div class="card glass pad"><div class="card-head"><h2>购物车</h2><span class="tag" id="blCartTag">0</span></div><div id="blCart" class="mini-list scroll-list"></div></div>
+          </div>
+        </div>
+        <div class="toolbar glass">
+          <div class="search"><span>⌕</span><input id="gameSearch" placeholder="搜索游戏名称或 AppID…"></div>
+          <div class="chips" id="gameFilters">
+            <button class="chip active" data-f="all">全部</button>
+            <button class="chip" data-f="played">有游玩记录</button>
+            <button class="chip" data-f="installed">已安装</button>
+            <button class="chip" data-f="private">隐私 / 隐藏</button>
+          </div>
+          <select id="gameSort" class="select">
+            <option value="playtime">按时长</option>
+            <option value="recent">按最近游玩</option>
+            <option value="value">按价值</option>
+            <option value="name">按名称</option>
+          </select>
+        </div>
+        <div class="card glass table-card">
+          <div class="table-scroll"><table class="tbl" id="gamesTable">
+            <thead><tr><th>游戏</th><th>累计时长</th><th>近 14 天</th><th>最后游玩</th><th>安装</th><th>估价</th><th>时长来源</th><th></th></tr></thead>
+            <tbody id="gamesBody"></tbody>
+          </table></div>
+          <div class="table-foot"><span id="gamesCount">—</span><span>点击行末「编辑」可手动修正名称 / 时长 / 价格 / 隐私标记</span></div>
+        </div>
+      </section>
+
+      <!-- 好友上线 -->
+      <section class="page" id="page-friends">
+        <div class="notice glass">
+          <div class="notice-icon">◉</div>
+          <div><h2>朋友上线，一眼看到</h2>
+            <p>好友状态直接读取<b>本机 Steam 客户端的好友列表</b>（每 3 秒同步，不需要 API Key）。服务在<b>后台持续比对</b>，好友上线或退出 Steam 都会立即记录并按你开启的通道推送，<b>即使面板关着也不漏</b>。所有记录只写在本机。</p></div>
+        </div>
+        <div class="kpi-grid" id="friendsKpi"></div>
+
+        <div class="card glass pad" id="friendDiagnosisCard">
+          <div class="card-head"><h2>上线监控诊断 · 为什么没显示</h2><span class="tag" id="friendDiagTag">检查中…</span></div>
+          <div id="friendDiagBody" class="diag-box"></div>
+          <div class="form-actions">
+            <button class="btn primary" id="btnFriendClientPoll">↻ 立即从 Steam 客户端读取</button>
+            <button class="btn ghost" id="btnFriendDiagRefresh">↻ 重新诊断</button>
+            <button class="btn ghost" id="btnCopyFriendCollector">⧉ 备用：复制浏览器采集脚本</button>
+            <a class="official-link" href="steam://open/friends">↗ 打开 Steam「好友与聊天」</a>
+          </div>
+          <p class="fine">SteamLens <b>直接读取 Steam 客户端好友列表显示的状态标记</b>，每 3 秒同步一次：好友上线 / 开始玩游戏会自动出现在面板和上线动态里，并按你设置的通道通知。不需要 API Key、不需要账号密码、不读聊天记录、不接触 Cookie；保持 Steam 客户端和「好友与聊天」窗口开着（可最小化）即可。</p>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>好友状态</h2><span class="tag" id="friendsModeTag">—</span></div>
+          <div class="friends-toolbar">
+            <div class="chips" id="friendFilters">
+              <button class="chip active" data-f="all">全部</button>
+              <button class="chip" data-f="online">在线</button>
+              <button class="chip" data-f="ingame">游戏中</button>
+              <button class="chip" data-f="starred">关注</button>
+            </div>
+            <div class="search friend-search"><span>⌕</span><input id="friendSearch" placeholder="搜索好友昵称…"></div>
+            <button class="btn ghost" id="btnFriendsRefresh">↻ 立即刷新</button>
+            <button class="btn warn" id="btnDeleteFriends">🗑 删掉好友</button>
+          </div>
+          <p class="fine" id="friendCacheNote">好友记录会在关闭软件时保存到本机，下次打开先显示记录，再从 Steam 更新。</p>
+          <div id="friendsGrid" class="friends-grid"></div>
+          <div class="form-actions friend-auto">
+            <label class="switch"><input type="checkbox" id="friendAuto" checked><span></span><b>后台自动监控</b></label>
+            <span class="fine" id="friendPollInfo">—</span>
+          </div>
+        </div>
+
+        <div class="card glass pad" id="friendProfileCard">
+          <div class="card-head"><h2>好友档案 · 库中游戏 / 时长 / 账号价值</h2><span class="tag" id="friendProfileTag">每秒更新</span></div>
+          <p class="fine">点好友卡片上的「查看档案」，SteamLens 会<b>直接读 Steam 客户端里显示的好友游戏库</b>：库中每款游戏、AppID、标价、各游戏时长、总时长、账号库价值与上线记录一起算出来并保存在本机。<b>库中游戏每秒自动重新读取一次</b>（不用等重新登录），不需要 Steam Web API Key，也不读聊天记录或凭证。好友把库设为私密时会明确提示；也可粘贴他自己的 GetOwnedGames JSON 补全时长。</p>
+          <div id="friendLibraryStatus" class="diag-line">正在连接 Steam 客户端…</div>
+          <div class="form-actions">
+            <label class="switch"><input type="checkbox" id="fpPastedToggle"><span></span><b>手动粘贴 JSON（补全各游戏时长）</b></label>
+            <button class="btn primary tiny" id="btnFriendProfileAll">↻ 批量刷新已存档案</button>
+            <button class="btn ghost tiny" id="btnFriendLibraryRefresh">⟳ 立即从 Steam 重新读取</button>
+          </div>
+          <label class="full-label" id="fpPastedBox" hidden>粘贴该好友的 GetOwnedGames JSON
+            <textarea id="fpPasted" rows="2" placeholder='{"response":{"games":[{"appid":730,"name":"Counter-Strike 2","playtime_forever":3691}]}}'></textarea>
+          </label>
+          <div id="friendProfileList" class="mini-list"></div>
+          <div id="friendProfileDetail" class="profile-detail"></div>
+
+          <div id="fpLibraryTools" class="fp-library" hidden>
+            <div class="card-head"><h2>库中的游戏 · <span id="fpGameCount">0</span> 款</h2><span class="tag" id="fpLiveTag">每秒自动更新</span></div>
+            <div class="fp-lib-controls">
+              <input id="fpGameSearch" type="search" placeholder="搜索游戏名 / AppID" autocomplete="off">
+              <select id="fpGameSort">
+                <option value="time">按游戏时长</option>
+                <option value="name">按名称</option>
+                <option value="price">按标价</option>
+                <option value="appid">按 AppID</option>
+              </select>
+            </div>
+            <div id="fpGameRows" class="fp-game-list"></div>
+          </div>
+
+          <!-- 「玩了多久 / 什么时候玩了什么」「朋友的朋友」「徽章」全部合并进档案，分段显示 -->
+          <div id="fpDossier" class="fp-dossier">
+            <div class="card-head"><h2>🕒 玩了多久 · 什么时候玩了什么</h2><span class="tag" id="fpDossierTag">每秒更新</span></div>
+            <p class="fine">下面是 SteamLens 自己在本机记录的上线 / 开始玩游戏事件，不依赖 Steam Web API Key，也不需要联网：点任意一条可看「天 / 小时 / 分钟 / 秒」换算。</p>
+            <div id="fpDossierTime" class="kpi-grid kpi-3" style="margin:10px 0"></div>
+            <div id="fpDossierTimeline" class="mini-list"></div>
+
+            <div class="card-head" style="margin-top:18px"><h2>👥 他朋友的朋友</h2><span class="tag" id="fpFofTag">0 人</span></div>
+            <div class="form-actions">
+              <button class="btn ghost tiny" id="btnFpFofScan">🔄 从已登录的 Steam 网页端扫描他的好友</button>
+            </div>
+            <p class="fine" id="fpFofNote">关系链要在已登录 Steam 的浏览器里打开他的好友列表页才能读到；服务端直连读不到公开好友，这是之前一直扫不出来的原因。</p>
+            <div id="fpFofList" class="mini-list"></div>
+
+            <div class="card-head" style="margin-top:18px"><h2>🏅 他在 Steam 里的徽章</h2><span class="tag" id="fpBadgeTag">0 枚</span></div>
+            <div id="fpBadgeList" class="mini-list"></div>
+          </div>
+        </div>
+
+        <div class="card glass pad" id="friendDiscoverCard">
+          <div class="card-head"><h2>好友关系链 · 朋友的朋友与他们的成就</h2><span class="tag" id="discoverTag">未扫描</span></div>
+          <p class="fine">Steam 客户端里只显示已加载的好友；这里会<b>从 Steam 社区好友列表</b>补出没显示的人，并顺着关系链找「朋友的朋友」。选中一款游戏后点某人的「看成就」，SteamLens 会读取<b>那个人</b>在 Steam 上的成就定义与解锁记录（中文名、说明、解锁时间精确到秒），写好永久缓存，以后打开直接显示。<b>只读取公开页面，不登录、不碰 Cookie、不读聊天记录</b>；对方把档案设为私密时 Steam 不会给出成就，界面会明确提示。</p>
+          <div class="form-actions">
+            <button class="btn primary tiny" id="btnDiscoverFriends">⟳ 立即自动扫描（网页端）</button>
+            <label class="switch"><input type="checkbox" id="discoverDepth" checked><span></span><b>包含「朋友的朋友」</b></label>
+          </div>
+          <div id="discoverNote" class="diag-line">尚未扫描。</div>
+          <div class="inline-row discover-pick">
+            <select id="discoverGame" class="select"><option value="">选一款本机游戏…</option></select>
+            <input id="discoverAppid" placeholder="或直接填 AppID，如 730" autocomplete="off">
+            <span class="fine">选好游戏后，点右边「看成就」</span>
+          </div>
+          <div id="discoverFriendsList" class="mini-list"></div>
+
+          <!-- 他有什么成就：直接列出这个人的成就名称 / 说明 / 解锁状态 / 解锁时间 -->
+          <div id="friendAchPanel" class="fa-panel" hidden>
+            <div class="card-head"><h2 id="faPanelTitle">他有什么成就</h2><span class="tag" id="faPanelTag">—</span></div>
+            <div class="fa-tools">
+              <label class="switch"><input type="checkbox" id="faOnlyUnlocked"><span></span><b>只看已解锁</b></label>
+              <button class="btn primary tiny" id="btnFaReadCurrent">⟳ 读取所选游戏的成就</button>
+              <button class="btn ghost tiny" id="btnFaRefreshAll">↻ 刷新他全部成就</button>
+              <button class="btn ghost tiny" id="btnFaClose">收起</button>
+            </div>
+            <p class="fine" id="faPanelNote"></p>
+            <div id="faPanelBody" class="fa-body"></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card glass pad">
+            <div class="card-head"><h2>上线动态</h2><span class="tag" id="eventCount">0 条</span></div>
+            <div id="friendTimeline" class="timeline"></div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>在线统计</h2><span class="tag">今日 / 累计</span></div>
+            <div id="friendStats" class="friend-stats"></div>
+            <div class="card-head" style="margin-top:18px"><h2>上线时段分布</h2><span class="tag" id="hourChartTag">每秒更新 · 按小时</span></div>
+            <div class="hour-range" id="hourRangeBar">
+              <button class="btn ghost tiny is-active" data-hour-range="1d" title="只看今天，每天 00:00 自动清零">一天上线（今天）</button>
+              <button class="btn ghost tiny" data-hour-range="14d" title="最近 14 天内，任一小时在线过就点亮">14 天上线</button>
+              <button class="btn ghost tiny" data-hour-range="30d" title="最近 30 天内，任一小时在线过就点亮">月上线（近 30 天）</button>
+              <span class="hr-note" id="hourRangeNote">每天 00:00 自动清零</span>
+            </div>
+            <div id="hourChart"></div>
+            <div class="fine" id="hourLegend" style="margin-top:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:linear-gradient(180deg,#3a7bff,#1b4fd0);vertical-align:middle;margin:0 4px"></span>蓝色 = 该小时内好友在线过<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:linear-gradient(180deg,#27e0c0,#13a98d);vertical-align:middle;margin:0 4px 0 12px"></span>青色 = 当前小时</div>
+            <div id="hourLiveInfo" class="diag-line ok">正在每秒读取本机上线记录…</div>
+          </div>
+        </div>
+
+        <div class="card glass pad" id="friendAwayCard">
+          <div class="card-head"><h2>好友离开时长 · 精准计时</h2><span class="tag" id="friendAwayTag">每秒更新</span></div>
+          <p class="fine">好友退出 Steam 后，SteamLens 按<b>本机记录的下线时刻</b>逐秒累计「已经离开了多久」；好友再次上线自动清零。每秒刷新一次，计时只存在本机，不联网、不需要 API Key。</p>
+          <div id="friendAwayList" class="fp-game-list"></div>
+          <div id="friendAwayInfo" class="diag-line ok">正在每秒读取本机下线记录…</div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>连接设置</h2><span class="tag" id="friendApiTag">未配置 Key</span></div>
+          <div class="form-grid">
+            <label>Steam Web API Key<input id="fApiKey" type="password" placeholder="填入后即可实时监控好友上线"></label>
+            <label>轮询间隔（秒）<input id="fPoll" type="number" min="15" max="3600" value="60"></label>
+          </div>
+          <label class="full-label">或粘贴 GetPlayerSummaries JSON（无 Key 也能导入一次状态）
+            <textarea id="fPasted" rows="2" placeholder='{"response":{"players":[{"steamid":"76561198...","personaname":"好友","personastate":1,"gameextrainfo":"Counter-Strike 2"}]}}'></textarea>
+          </label>
+          <label class="full-label">手动添加好友 SteamID64
+            <div class="inline-row"><input id="fAddId" placeholder="76561198…（17 位）"><input id="fAddName" placeholder="备注名（可选）"><button class="btn ghost" id="btnAddFriend">添加</button></div>
+          </label>
+          <div class="form-actions">
+            <button class="btn primary" id="btnSaveFriendCfg">保存并刷新</button>
+            <button class="btn ghost" id="btnClearEvents">清空动态</button>
+            <button class="btn warn tiny" id="btnPruneFriends">🧹 清理非好友</button>
+            <span id="pruneNote" class="muted"></span>
+            <label class="switch"><input type="checkbox" id="fNotify" checked><span></span><b>关注好友上线时通知</b></label>
+            <label class="switch"><input type="checkbox" id="fRemoteAvatar"><span></span><b>加载在线头像（联网）</b></label>
+          </div>
+          <p class="fine">获取 Key：打开 steamcommunity.com/dev/apikey，登录 Steam 后填任意域名即可生成。Key 只保存在本机 config.json，请求直接发往 Steam 官方 API。好友名册来自本机缓存；在线状态来自 Steam 官方接口。</p>
+          <div id="friendWarnings" class="roots"></div>
+        </div>
+      </section>
+
+      <!-- 隐私 -->
+      <section class="page" id="page-private">
+        <div class="notice glass">
+          <div class="notice-icon">◐</div>
+          <div><h2>隐私游戏，照样计入统计</h2>
+            <p>Steam 个人资料设为「私密」、或在库中被「隐藏」的游戏，网页 API 通常拿不到；SteamLens 直接读取本机 <code>localconfig.vdf</code>，因此<b>这些游戏的时长与价值仍然完整计入总量</b>。你可以让名称在展示和导出时脱敏，统计数值不受影响。</p></div>
+        </div>
+        <div class="kpi-grid kpi-3" id="privateKpi"></div>
+
+        <div class="card glass pad" id="hiddenSyncCard">
+          <div class="card-head">
+            <h2>Steam 隐藏游戏 · 自动识别</h2>
+            <span class="tag" id="hiddenSyncTag">等待首次扫描</span>
+          </div>
+          <p class="muted">自动读取本机 Steam 的 <code>localconfig.vdf</code> / 库收藏夹「隐藏」分类，以及浏览器已登录会话里的隐藏清单；识别到的游戏会<b>自动填进下方列表</b>，时长与价值照常计入统计。默认每分钟更新一次，开关与间隔永久保存。</p>
+          <div class="refresh-bar glass" id="hiddenSyncBar"></div>
+          <div class="estimate-row">
+            <label class="switch"><input type="checkbox" id="hiddenAutoToggle" checked><span></span><b>每分钟自动同步</b></label>
+            <button class="btn primary tiny" id="btnHiddenScan">↻ 立即扫描 Steam</button>
+            <button class="btn ghost tiny" id="btnHiddenRestore">恢复全部自动识别</button>
+            <span class="muted" id="hiddenCountdown">—</span>
+          </div>
+          <div id="hiddenSources" class="source-list"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head">
+            <h2>隐私与隐藏列表</h2>
+            <label class="switch"><input type="checkbox" id="maskToggle" checked><span></span><b>名称脱敏显示</b></label>
+          </div>
+          <div id="privateList" class="private-list"></div>
+        </div>
+      </section>
+
+      <!-- 价值 -->
+      <section class="page" id="page-value">
+        <div class="kpi-grid kpi-3" id="valueKpi"></div>
+        <div class="refresh-bar glass" id="valueRefreshBar"></div>
+        <div class="card glass pad">
+          <div class="card-head"><h2>库价值估算</h2><span class="tag" id="priceTag">未估价</span></div>
+          <p class="muted" id="priceBasis">读取中…</p>
+          <p class="fine" id="valueLedgerHint">价值账本读取中…</p>
+          <div class="estimate-row">
+            <button class="btn primary" id="btnEstimate">⇣ 获取商店标价并估算</button>
+            <button class="btn ghost" id="btnEstimateAll">补齐全部缺失价格</button>
+            <div class="estimate-progress" id="estimateProgress" hidden><div class="bar"><i id="estimateBar"></i></div><span id="estimateText">准备中…</span></div>
+          </div>
+          <p class="fine">此操作会向 store.steampowered.com 逐个查询「当前商店标价」，结果缓存在本机；不上传你的游戏列表、账号或时长。免费/已下架/区域受限的游戏记为不可估价，可在游戏库里手动填价格。</p>
+        </div>
+        <div class="grid-2">
+          <div class="card glass pad">
+            <div class="card-head"><h2>最值钱的游戏</h2><span class="tag" id="valueRankTag">按原价</span></div>
+            <p class="fine" id="valueRankNote">只显示 Steam 客户端 + 网页端真实游戏库里有的游戏。</p>
+            <div id="valueRank" class="bars"></div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>每小时成本</h2><span class="tag" id="costRankTag">越低越回本</span></div>
+            <p class="fine" id="costRankNote">按真实库里每款游戏的标价 ÷ 游玩小时计算。</p>
+            <div id="costRank" class="bars"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card glass pad">
+            <div class="card-head"><h2>不计入价值的游戏</h2><span class="tag" id="excludedTag">0 款</span></div>
+            <p class="fine" id="excludedHint">连接 Steam 账号后，已退款、愿望单里、以及账号里已不存在的本地历史记录会自动从价值里剔除。</p>
+            <div id="excludedList" class="mini-list"></div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>愿望单</h2><span class="tag" id="wishlistTag">0 款</span></div>
+            <p class="fine">愿望单只作参考，不算进库价值。跌破提醒线时会自动发邮件，详见「通知与邮箱」。</p>
+            <div id="wishlistList" class="mini-list"></div>
+          </div>
+        </div>
+        <div class="card glass pad">
+          <div class="card-head"><h2>全部游戏 · 每款各值多少钱</h2><span class="tag" id="valueAllTag">0 款</span></div>
+          <p class="fine" id="valueAllNote">逐款列出 Steam 客户端 + 网页端真实游戏库里每款游戏的标价与合计，库外历史记录不显示。价格来自 Steam 商店当前人民币标价，缓存在本机；<b>每天自动重算一次</b>，也可以点上方按钮立即刷新。</p>
+          <div class="inline-row" style="margin:10px 0">
+            <input id="valueAllSearch" placeholder="搜游戏名或 AppID…" autocomplete="off">
+            <label class="switch"><input type="checkbox" id="valueAllOnlyPriced" checked><span></span><b>只看已估价的</b></label>
+          </div>
+          <p class="fine" id="valueAllHint" style="margin:6px 0"></p>
+          <div id="valueAllList" class="mini-list"></div>
+        </div>
+      </section>
+
+      <!-- 进度 -->
+      <section class="page" id="page-progress">
+        <div class="kpi-grid kpi-3" id="progressKpi"></div>
+        <div class="card glass pad">
+          <div class="card-head"><h2>累计时长趋势</h2><span class="tag">每次扫描自动保存快照</span></div>
+          <div id="trendChart"></div>
+        </div>
+        <div class="grid-2">
+          <div class="card glass pad"><div class="card-head"><h2>较上次新增</h2><span class="tag" id="deltaSince">—</span></div><div id="deltaList" class="recent-list"></div></div>
+          <div class="card glass pad"><div class="card-head"><h2>快照记录</h2><span class="tag" id="snapCount">0 条</span></div><div id="snapList" class="snap-list"></div></div>
+        </div>
+      </section>
+
+      <!-- 导出：只保留「交给 DeepSeek 的上下文包」，不再提供 JSON / CSV / Markdown 三个下载入口 -->
+      <section class="page" id="page-export">
+        <div class="card glass pad">
+          <div class="card-head"><h2>交给 DeepSeek 的上下文包</h2><span class="tag">MARKDOWN</span></div>
+          <p class="muted">一键复制后粘贴到 DeepSeek 对话框，即可让它基于真实数据分析你的游戏习惯。若客户端支持 MCP，请到「连接与配对」复制配置，DeepSeek 可直接调用工具而无需手动粘贴。</p>
+          <div class="export-actions">
+            <button class="btn primary" id="btnCopyMd">⧉ 复制报告</button>
+            <button class="btn ghost" id="btnCopyPrompt">⧉ 复制分析提示词</button>
+            <label class="switch"><input type="checkbox" id="exportMask" checked><span></span><b>报告内隐私名称脱敏</b></label>
+          </div>
+          <pre class="preview" id="mdPreview">生成中…</pre>
+        </div>
+      </section>
+
+      <!-- Steam 账号连接（只读授权） -->
+      <section class="page" id="page-account">
+        <div class="notice glass soft">
+          <div class="notice-icon">◎</div>
+          <div><h2>为什么这里不让你输 Steam 账号密码？</h2>
+            <p>Steam 没有开放给第三方本地程序的扫码/账号登录接口，网页登录还带 Steam Guard 验证码；让本地页面收密码本质上就是钓鱼。<b>登录这件事发生在 Steam 官网</b>，你只需在那里领一个只读 Web API Key，我们拿它读取「当前真正拥有的游戏」——<b>已退款的和愿望单里的都不会出现在结果里</b>，这正是你想要的口径。Key 只存在本机。</p></div>
+        </div>
+
+        <div class="login-layout">
+          <div class="login-card glass">
+            <div class="login-head">
+              <svg viewBox="0 0 40 40" width="38" height="38" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="#1b2838"/><circle cx="26" cy="14" r="6" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="26" cy="14" r="2" fill="#fff"/><circle cx="13" cy="26" r="7" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="13" cy="26" r="2.4" fill="#fff"/><path d="M18.5 21.5 L21.5 18.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+              <div><b>连接 Steam 账号</b><small>READ-ONLY · 官方 Web API</small></div>
+            </div>
+            <div class="login-user">
+              <div class="login-avatar" id="acctAvatar">S</div>
+              <div><b id="acctName">尚未连接</b><small id="acctId">本机 Steam 账号</small></div>
+              <span class="status-pill" id="acctStatus"><i></i>未连接</span>
+            </div>
+            <div class="official-login">
+              <b>方式 1 · 用账号密码登录（推荐，最准）</b>
+              <button class="btn primary" id="btnSteamOfficialLogin">打开 Steam 官方客户端登录</button>
+              <p class="fine">密码<b>只输入到 Steam 自己的窗口</b>里，SteamLens 完全不接触、不保存。登录完成后点右侧「立即重新同步」，本地时长、隐私游戏与账号资料会自动更新。</p>
+              <span class="fine" id="steamExeInfo"></span>
+            </div>
+            <div class="mode-divider">方式 2 · Steam 官网只读授权（自动扫描真实库）</div>
+            <label>SteamID64 / 个人资料链接
+              <input id="acctSteamId" placeholder="76561198… 或 steamcommunity.com/profiles/…">
+            </label>
+            <label>Steam Web API Key（只读）
+              <div class="inline-row"><input id="acctApiKey" type="password" placeholder="在 Steam 官网领取后粘贴到这里">
+              <button class="btn ghost tiny" id="btnToggleKey" type="button">显示</button></div>
+            </label>
+            <div class="login-actions">
+              <button class="btn primary" id="btnAccountConnect">登录并扫描游戏库</button>
+              <button class="btn ghost" id="btnAccountDisconnect">退出账号</button>
+            </div>
+            <a class="official-link" href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">↗ 打开 Steam 官网领取只读 Key（域名随便填）</a>
+            <p class="fine">本页<b>不接收也不保存 Steam 账号密码</b>。连接后自动扫描真实库、剔除退款与愿望单，并按间隔自动重同步。</p>
+          </div>
+
+          <div class="card glass pad">
+            <div class="card-head"><h2>扫描结果</h2><span class="tag" id="acctSyncTag">—</span></div>
+            <div class="kpi-grid kpi-3" id="acctKpi"></div>
+            <div class="form-actions">
+              <button class="btn ghost" id="btnAccountSync">↻ 立即重新同步</button>
+              <button class="btn ghost" id="btnGenLinks">⧉ 生成 API 链接</button>
+            </div>
+            <div id="acctLinks" class="roots"></div>
+            <label class="full-label">备用：粘贴 GetOwnedGames JSON（网络不通时用）
+              <textarea id="acctPastedOwned" rows="2" placeholder='{"response":{"games":[{"appid":730,"name":"Counter-Strike 2","playtime_forever":3691}]}}'></textarea>
+            </label>
+            <label class="full-label">备用：粘贴愿望单 wishlistdata JSON
+              <textarea id="acctPastedWishlist" rows="2" placeholder='{"730":{"name":"Counter-Strike 2"}}'></textarea>
+            </label>
+            <div class="form-actions"><button class="btn primary" id="btnPasteImport">导入粘贴的数据并扫描</button></div>
+            <div id="acctWarnings" class="roots"></div>
+          </div>
+        </div>
+
+        <div class="card glass pad" id="accountLinkCard">
+          <div class="card-head"><h2>Steam 账号自动连接</h2><span class="tag" id="accountLinkTag">检测中…</span></div>
+          <p class="fine">打开 Steam 客户端时，SteamLens 会<b>自动识别本机登录的 Steam 账号</b>并连上（无需手动填 Key），拾取只有登录才能拿到的本地信息（游戏库、时长、账号资料）。检测到的账号会自动填到下面的「SteamID64」框里。</p>
+          <div class="inline-row" style="align-items:center">
+            <label class="switch"><input type="checkbox" id="accountAutoLink"><span></span><b>自动连接本机 Steam 账号</b></label>
+            <span id="detectedAccount" class="status-pill"><i></i>未检测到</span>
+          </div>
+          <div class="card-head" style="margin-top:16px"><h2>Steam 登录记录</h2><span class="tag">精确到秒 · 含登录地点</span></div>
+          <p class="fine" id="loginWhereNote">「地点」记录的是本机设备名（hostname）——这是「在哪台机器登录」的准确答案。Steam 官网侧的城市需要额外授权，暂未接入。</p>
+          <div id="accountLogins" class="mini-list"></div>
+        </div>
+
+        <div class="card glass pad" id="vaultCard">
+          <div class="card-head"><h2>已保存账号（保险库）</h2><span class="tag" id="vaultCount">0</span></div>
+          <p class="fine">连接过 / 本机检测到的 Steam 账号都会自动存到这里（含只读 Key），可一键切换、离线也能看到。点左上角<b>头像 ▾</b> 也能快速切换。</p>
+          <div id="vaultList" class="mini-list"></div>
+          <div class="form-actions" style="margin-top:10px">
+            <button class="btn ghost tiny" id="btnVaultAdd">＋ 把当前账号加入保险库</button>
+            <button class="btn primary tiny" id="btnCreateAccount">➕ 创建新账号</button>
+          </div>
+          <div id="createAccountBox" class="card-sub" hidden style="margin-top:10px">
+            <div class="form-grid">
+              <label>备注名（方便识别）<input id="caNote" type="text" placeholder="例如：小号 / 室友 / 家人A"></label>
+              <label>SteamID64（必填）<input id="caSteamId" type="text" placeholder="7656119xxxxxxxxxx"></label>
+              <label>只读 API Key（可选，用于读取资料 / 游戏库）<input id="caApiKey" type="text" placeholder="在 Steam 官网「API Key」页领取"></label>
+              <label>Steam 家庭访问令牌（可选，用于识别该账号的共享家庭）<input id="caFamToken" type="password" placeholder="webapi_token，见「识别家庭」页说明"></label>
+            </div>
+            <label class="switch" style="margin:6px 0 4px"><input type="checkbox" id="caSetCurrent"><span></span><b>创建后设为当前账号并识别</b></label>
+            <p class="fine">创建后会在列表里出现，可一键「切换」成当前账号，再去「识别家庭 / 系统对比 / 好友」等页面识别它；填了家庭令牌就能直接「识别家庭」。</p>
+            <div class="form-actions">
+              <button class="btn primary tiny" id="btnCaSave">保存账号</button>
+              <button class="btn ghost tiny" id="btnCaCancel">取消</button>
+              <span id="caMsg" class="muted"></span>
+            </div>
+          </div>
+          <button class="btn ghost tiny" id="btnDiscoverAccounts" style="margin-top:8px">🔍 发现本机 Steam 账号</button>
+          <div id="discoveredAccounts" class="card-sub" hidden style="margin-top:8px">
+            <p class="fine">本机 Steam 登录过的账号会自动列出来，点「添加」即可建为账号（自动提取 SteamID64）。你登录另一个账号后，再点这里就能捡到它。</p>
+            <div id="discoveredList" class="mini-list"></div>
+          </div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>真实游戏库明细</h2><span class="tag">退款 / 愿望单 / 未验证</span></div>
+          <p class="fine">「疑似退款」是本机有游玩记录、但账号里已经不存在的游戏（也可能是家庭共享 / 免费周末 / 试玩版）。默认不计入价值；如果你确认仍拥有，点「恢复计入」即可。</p>
+          <div class="table-scroll"><table class="tbl"><thead><tr><th>游戏</th><th>分类</th><th>时长</th><th>原价</th><th>说明</th><th></th></tr></thead>
+          <tbody id="truthTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- 通知与邮箱 -->
+      <section class="page" id="page-notify">
+        <div class="grid-2">
+          <div class="card glass pad">
+            <div class="card-head"><h2>电脑弹窗通知</h2><span class="tag" id="notifyTag">—</span></div>
+            <p class="muted">好友<b>上线</b>或<b>退出 Steam</b>时，由<b>后台服务</b>直接弹 Windows 原生通知并推送到你已开启的通道；面板关着、浏览器没开也照样送达。</p>
+            <div class="form-grid">
+              <label>通知范围<select id="nScope" class="select"><option value="all">所有好友</option><option value="starred">仅关注好友 ★</option></select></label>
+              <label>去重间隔（秒）<input id="nMinInterval" type="number" min="30" max="3600" value="300"></label>
+            </div>
+            <div class="form-actions">
+              <label class="switch"><input type="checkbox" id="nDesktop" checked><span></span><b>桌面弹窗</b></label>
+              <label class="switch"><input type="checkbox" id="nSound"><span></span><b>提示音</b></label>
+              <label class="switch"><input type="checkbox" id="nEnabled" checked><span></span><b>通知总开关</b></label>
+              <label class="switch"><input type="checkbox" id="nOfflineEnabled" checked><span></span><b>好友退出 Steam 时推送</b></label>
+            </div>
+            <label class="full-label">Webhook（可选，把消息推到手机：Bark / Server酱 / 企业微信机器人）
+              <div class="inline-row"><input id="nWebhook" placeholder="https://api.day.app/… 留空则不启用">
+                <select id="nWebhookType" class="select"><option value="auto">自动识别</option><option value="bark">Bark</option><option value="serverchan">Server酱</option><option value="wecom">企微/钉钉/飞书</option><option value="custom">自定义 JSON</option></select></div>
+            </label>
+            <div class="form-actions">
+              <button class="btn primary" id="btnSaveNotify">保存通知设置</button>
+              <button class="btn ghost" id="btnTestNotify">🔔 上线测试弹窗</button>
+              <button class="btn ghost" id="btnTestOffline">🔕 退出 Steam 测试</button>
+            </div>
+            <div id="notifyHistory" class="mini-list"></div>
+          </div>
+
+          <div class="card glass pad mail-card">
+            <div class="card-head"><h2>QQ 邮箱自动通知</h2><span class="status-pill" id="mailStatusBadge"><i></i>未登录</span></div>
+            <div class="qr-row">
+              <img id="mailQr" src="assets/qq-mail-qr.png" alt="扫码打开 QQ 邮箱">
+              <div>
+                <b>扫码打开 QQ 邮箱</b>
+                <p class="fine">在手机 QQ 邮箱 App →「设置 → 账号 → 安全设置」里开启 <b>IMAP/SMTP 服务</b>，拿到 <b>16 位授权码</b>填到下面。授权码不是 QQ 密码，只能发信、读不了你的邮件。</p>
+                <p class="fine">二维码指向 QQ 邮箱官网，<b>不含任何账号或凭证</b>；它不是「扫码代登录」——第三方程序本来就无法接管 QQ 邮箱登录。</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label>QQ 邮箱地址<input id="mailUser" placeholder="name@example.com"></label>
+              <label>收件人（留空 = 发给自己）<input id="mailTo" placeholder="默认自己"></label>
+            </div>
+            <label class="full-label">SMTP 授权码（必须 16 位，不是 QQ 密码）
+              <input id="mailAuthCode" type="password" placeholder="QQ 邮箱 → 设置 → 账号 → 生成 16 位授权码">
+            </label>
+            <div class="login-actions">
+              <button class="btn primary" id="btnMailLogin">登录 QQ 邮箱</button>
+              <button class="btn ghost" id="btnMailLogout">退出账号</button>
+            </div>
+            <label class="switch"><input type="checkbox" id="mailVerify" checked><span></span><b>登录时发一封测试邮件确认</b></label>
+            <div class="form-actions">
+              <label class="switch"><input type="checkbox" id="mOnOnline" checked><span></span><b>好友上线时发邮件</b></label>
+              <label class="switch"><input type="checkbox" id="mOnOffline" checked><span></span><b>好友退出 Steam 时发邮件</b></label>
+            </div>
+            <div id="mailDiagnosis" class="diag-box"></div>
+            <div class="form-actions">
+              <button class="btn ghost" id="btnMailTest">✉ 发送测试邮件</button>
+              <span class="fine" id="mailHint">凭证保存在本机 config.json，长期有效、服务重启自动恢复 = 永久登录。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card glass pad wechat-card">
+            <div class="card-head"><h2>微信推送 · 只发给我自己</h2><span class="status-pill" id="wechatStatusBadge"><i></i>未绑定</span></div>
+            <div class="qr-row">
+              <img id="wechatQr" src="assets/wechat-qr.png" alt="扫码绑定微信推送">
+              <div>
+                <b>微信扫码绑定推送通道</b>
+                <p class="fine">扫上面二维码 → 用<b>你自己的微信</b>扫码登录官方页 → 复制 <b>SendKey</b> 填到下面。之后好友上线、愿望单降价/回涨会自动推到<b>你自己的微信</b>，效果和给自己发消息一样。</p>
+                <p class="fine" id="wechatChannelHint">微信扫码登录后复制 SendKey（SCT 开头）</p>
+                <p class="fine"><b>别人发不进来</b>：这是只属于你的单向通道，程序不读取任何聊天记录、好友或文件，也不会向其他人发消息。第三方程序无法登录微信个人号，「文件传输助手」没有开放接口，所以走官方推送通道。</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label>推送通道<select id="wChannel" class="select">
+                <option value="serverchan">Server酱³ · 微信扫码绑定</option>
+                <option value="pushplus">PushPlus · 微信扫码绑定</option>
+                <option value="wecom">企业微信群机器人</option>
+                <option value="custom">自定义 Webhook</option>
+              </select></label>
+              <label>去重间隔（秒）<input id="wMinInterval" type="number" min="0" max="3600" value="60"></label>
+            </div>
+            <label class="full-label">SendKey / token（不是微信密码）
+              <input id="wKey" type="password" placeholder="已绑定后留空表示沿用原来的 Key">
+            </label>
+            <div class="login-actions">
+              <button class="btn primary" id="btnWechatLogin">登录微信</button>
+              <button class="btn ghost" id="btnWechatLogout">退出账号</button>
+              <button class="btn ghost" id="btnWechatTest">↗ 发一条测试</button>
+            </div>
+            <div class="form-actions">
+              <label class="switch"><input type="checkbox" id="wOnOnline" checked><span></span><b>好友上线时推送</b></label>
+              <label class="switch"><input type="checkbox" id="wOnOffline" checked><span></span><b>好友退出 Steam 时推送</b></label>
+              <label class="switch"><input type="checkbox" id="wOnWishlist" checked><span></span><b>愿望单降价/回涨时推送</b></label>
+              <label class="switch"><input type="checkbox" id="wEnabledWechat" checked><span></span><b>微信推送总开关</b></label>
+            </div>
+            <p class="fine" id="wechatHint">凭证保存在本机 config.json，长期有效、服务重启自动恢复 = 永久登录。</p>
+          </div>
+
+          <div class="card glass pad">
+            <div class="card-head"><h2>微信推送记录</h2><span class="tag" id="wechatHistoryTag">0 条</span></div>
+            <div id="wechatHistory" class="mini-list"></div>
+            <div class="card-head" style="margin-top:16px"><h2>已连接的通道</h2></div>
+            <div id="wechatChannels" class="mini-list"></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card glass pad qq-card">
+            <div class="card-head"><h2>QQ 通知 · 只发给我自己</h2><span class="status-pill" id="qqStatusBadge"><i></i>未绑定</span></div>
+            <div class="qr-row">
+              <img id="qqQr" src="assets/qmsg-qr.png" alt="扫码打开 QQ 推送官方页">
+              <div>
+                <b id="qqQrTitle">扫码打开 Qmsg 酱官网</b>
+                <p class="fine" id="qqQrDesc">用<b>你自己的 QQ</b> 扫码登录官方页 → 复制 Key 填到下面。之后好友上线、愿望单降价/回涨会自动推到<b>你自己的 QQ</b>。</p>
+                <p class="fine">二维码只指向官网，<b>不含任何账号或凭证</b>；它不是「扫码代登录」——第三方程序本来就无法接管 QQ 登录。消息单向、<b>别人发不进来</b>，程序也不读任何聊天记录。</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label>推送通道              <select id="qChannel" class="select">
+                <option value="qmsg">Qmsg 酱 · QQ 扫码绑定</option>
+                <option value="onebot">本机 QQ 机器人 (OneBot)</option>
+                <option value="custom">自定义 Webhook</option>
+              </select></label>
+              <label>接收消息的自己 QQ 号<input id="qUin" placeholder="例如 123456789"></label>
+            </div>
+            <label class="full-label" id="qKeyLabel"><span id="qKeyLabelText">Qmsg 酱 Key（不是 QQ 密码）</span>
+              <input id="qKey" type="password" placeholder="已绑定后留空表示沿用原来的 Key">
+            </label>
+            <label class="full-label" id="qEndpointLabel"><span id="qEndpointLabelText">机器人地址 / 自定义 Webhook（选填）</span>
+              <input id="qEndpoint" placeholder="http://127.0.0.1:3000 或完整 URL">
+            </label>
+            <p class="fine" id="qChannelHint">在 qmsg.zendee.cn 用你自己的 QQ 扫码绑定后复制 Key，填到上面。</p>
+            <div class="login-actions">
+              <button class="btn primary" id="btnQqLogin">登录 QQ</button>
+              <button class="btn ghost" id="btnQqLogout">退出账号</button>
+              <button class="btn ghost" id="btnQqTest">↗ 发一条测试</button>
+            </div>
+            <div class="form-actions">
+              <label class="switch"><input type="checkbox" id="qOnOnline" checked><span></span><b>好友上线时推送</b></label>
+              <label class="switch"><input type="checkbox" id="qOnOffline" checked><span></span><b>好友退出 Steam 时推送</b></label>
+              <label class="switch"><input type="checkbox" id="qOnWishlist" checked><span></span><b>愿望单降价/回涨时推送</b></label>
+              <label class="switch"><input type="checkbox" id="qEnabled" checked><span></span><b>QQ 通知总开关</b></label>
+            </div>
+            <p class="fine" id="qqHint">凭证保存在本机 config.json，长期有效、服务重启自动恢复 = 永久登录。</p>
+            <div id="qqDiagnosis"></div>
+            <div id="qqHistory" class="mini-list"></div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>三条通道对照</h2><span class="tag">都只发给你自己</span></div>
+            <div id="qqChannelList" class="mini-list"></div>
+            <p class="fine" style="margin-top:12px">电脑弹窗、QQ 邮箱、微信、QQ、钉钉五条通道相互独立，可同时开启。每条都有自己的开关与去重间隔，测试通知只弹窗、不会重复发邮件或推送。</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card glass pad dingtalk-card">
+            <div class="card-head"><h2>钉钉通知 · 只推给我自己</h2><span class="status-pill" id="dingtalkStatusBadge"><i></i>未绑定</span></div>
+            <div class="qr-row">
+              <img id="dingtalkQr" src="assets/dingtalk-qr.png" alt="扫码打开钉钉机器人官方文档">
+              <div>
+                <b>在钉钉里建一个只有自己的群，添加自定义机器人</b>
+                <p class="fine">扫码看钉钉官方文档 → 群设置 → 智能群助手 → 添加自定义机器人 → 复制 <b>Webhook</b>（以及可选的<b>加签密钥</b>）填到下面。之后好友上线、愿望单降价/回涨会自动推到<b>你自己的钉钉群</b>。</p>
+                <p class="fine">二维码只指向官方文档，<b>不含任何账号或凭证</b>。第三方程序无法扫码代登录钉钉个人号，所以走官方机器人 Webhook；消息单向、<b>别人发不进来</b>，程序也不读任何聊天记录。</p>
+              </div>
+            </div>
+            <label class="full-label">机器人 Webhook（不是钉钉密码）
+              <input id="dWebhook" type="password" placeholder="https://oapi.dingtalk.com/robot/send?access_token=…">
+            </label>
+            <div class="form-grid">
+              <label>加签密钥（SEC 开头，选填）<input id="dSecret" type="password" placeholder="机器人安全设置选了「加签」才需要"></label>
+              <label>自定义关键词（选填）<input id="dKeyword" placeholder="机器人安全设置选了「关键词」才需要"></label>
+            </div>
+            <div class="login-actions">
+              <button class="btn primary" id="btnDingtalkLogin">登录钉钉</button>
+              <button class="btn ghost" id="btnDingtalkLogout">退出账号</button>
+              <button class="btn ghost" id="btnDingtalkTest">↗ 发一条测试</button>
+            </div>
+            <div class="form-actions">
+              <label class="switch"><input type="checkbox" id="dOnOnline" checked><span></span><b>好友上线时推送</b></label>
+              <label class="switch"><input type="checkbox" id="dOnOffline" checked><span></span><b>好友退出 Steam 时推送</b></label>
+              <label class="switch"><input type="checkbox" id="dOnWishlist" checked><span></span><b>愿望单降价/回涨时推送</b></label>
+              <label class="switch"><input type="checkbox" id="dEnabled" checked><span></span><b>钉钉推送总开关</b></label>
+            </div>
+            <p class="fine" id="dingtalkHint">Webhook 与加签密钥保存在本机 config.json，长期有效、服务重启自动恢复 = 永久登录。</p>
+            <div id="dingtalkDiagnosis"></div>
+            <div class="card-head" style="margin-top:14px"><h2 style="font-size:12px">推送记录</h2><span class="tag" id="dingtalkHistoryTag">0 条</span></div>
+            <div id="dingtalkHistory" class="mini-list"></div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>钉钉通道说明</h2><span class="tag">安全边界</span></div>
+            <div id="dingtalkChannels" class="mini-list"></div>
+            <p class="fine" style="margin-top:12px">发送结果会解析钉钉返回的 <code>errcode</code>：只有 <code>0</code> 才算送达，不会出现「中转站没记录、界面却说成功」的假成功。</p>
+            <p class="fine">如果机器人在钉钉里启用了加签或关键词，请把对应值填到左边，否则钉钉会拒收并返回 310000。</p>
+          </div>
+        </div>
+
+        <div class="card glass pad sms-card">
+          <div class="card-head"><h2>📱 手机号通知 · 短信提醒</h2><span class="status-pill" id="smsStatusBadge"><i></i>未配置</span></div>
+          <p class="fine">填手机号与短信网关地址后，SteamLens 会用短信把通知发到你手机。下面每个类别都能单独关，<b>关掉的类别一条短信都不发</b>；「一键关闭 / 一键开启」控制全部短信，用来省短信费。所有开关与发送记录都存在本机。</p>
+          <p class="fine" style="color:var(--amber,#b5730f)"><b>先说明白：</b>程序没法「登录手机号」直接发短信，短信必须由运营商 / 短信服务商下发。这里接的是一个<b>短信网关 Webhook</b>（POST JSON <code>{phone, text, event, token}</code>），可以是腾讯云 / 阿里云短信 API 外面包的一层转发，也可以是你自己的服务。没填网关时只保存设置，<b>不会发送、不会产生费用</b>。</p>
+          <div class="form-grid">
+            <label>接收短信的手机号<input id="smsPhone" placeholder="例如 13800138000" inputmode="tel" autocomplete="off"></label>
+            <label>短信网关 Webhook<input id="smsWebhook" placeholder="https://… 接收 POST JSON"></label>
+          </div>
+          <label class="full-label">网关令牌（选填）<input id="smsToken" type="password" placeholder="网关要求校验才填；只存本机，不写进离线文件"></label>
+          <div class="form-actions">
+            <button class="btn primary" id="btnSmsSave">保存手机号与网关</button>
+            <button class="btn ghost" id="btnSmsTest">↗ 发一条测试短信</button>
+            <label class="switch"><input type="checkbox" id="smsEnabled" checked><span></span><b>短信总开关</b></label>
+          </div>
+          <div class="card-head" style="margin-top:14px"><h2 style="font-size:12px">按大类一键控制</h2><span class="tag">好友通知 / 愿望单通知</span></div>
+          <div class="sms-switches" id="smsGroups"></div>
+          <div class="card-head" style="margin-top:14px"><h2 style="font-size:12px">按类别精细控制（关掉就不发，省短信费）</h2><span class="tag" id="smsOnCount">—</span></div>
+          <div class="sms-switches" id="smsSwitches"></div>
+          <div class="form-actions">
+            <button class="btn ghost" id="btnSmsAllOff">⏻ 一键关闭全部短信</button>
+            <button class="btn primary" id="btnSmsAllOn">✓ 一键开启全部短信</button>
+          </div>
+          <div class="card-head" style="margin-top:14px"><h2 style="font-size:12px">短信发送记录</h2><span class="tag" id="smsHistoryTag">0 条</span></div>
+          <div id="smsHistory" class="mini-list"></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card glass pad">
+            <div class="card-head"><h2>愿望单降价 / 回涨提醒</h2><span class="tag" id="wishTag">—</span></div>
+            <p class="fine">只有价格<b>跌破</b>提醒线才发邮件；本来就在提醒线以下不发。打折结束后价格<b>涨回</b>提醒线以上，再发一封「恢复原价」提醒。首次只建立基线，不打扰。下面每款游戏右边都有 <b>✕ 不再提醒</b>：点一下这款游戏就不再发降价/回涨通知，并删掉它已有的提醒记录；再点「↺ 恢复」可重新开启。</p>
+            <div class="form-grid">
+              <label>提醒线（¥）<input id="wThreshold" type="number" min="1" max="9999" value="30"></label>
+              <label>检查间隔（小时）<input id="wCheckHours" type="number" min="1" max="168" value="6"></label>
+            </div>
+            <div class="form-actions">
+              <label class="switch"><input type="checkbox" id="wEnabled" checked><span></span><b>开启邮件提醒</b></label>
+              <button class="btn primary" id="btnSaveWishlist">保存</button>
+              <button class="btn ghost" id="btnWishlistCheck">↻ 立即检查价格</button>
+            </div>
+            <div id="wishlistStatus" class="mini-list"></div>
+          </div>
+          <div class="card glass pad">
+            <div class="card-head"><h2>自动刷新状态</h2><span class="tag">后台常驻</span></div>
+            <p class="fine">好友状态、库价值、账号真实库、愿望单价格都由服务自动定时更新，不需要手动点，也不依赖面板是否开着。</p>
+            <div id="autoRefreshList" class="mini-list"></div>
+            <div class="form-actions"><button class="btn ghost" id="btnRefreshAll">↻ 立即全部刷新</button></div>
+          </div>
+        </div>
+        <div class="card glass pad">
+          <div class="card-head"><h2>最近提醒记录</h2><span class="tag" id="alertTag">0 条</span></div>
+          <p class="fine">每条记录右边的 <b>✕</b> 只删这一条提醒。想让某款游戏以后都别提醒，用上面「愿望单降价 / 回涨提醒」里那款游戏的「✕ 不再提醒」。</p>
+          <div id="wishlistAlerts" class="mini-list"></div>
+        </div>
+      </section>
+
+      <!-- 连接与配对 -->
+      <section class="page" id="page-connect">
+        <div class="grid-2">
+          <div class="card glass pad mode-card" id="autoCard">
+            <div class="mode-head"><span class="mode-no">01</span><h2>自动连接 Steam</h2><span class="tag">推荐 · 免配置</span></div>
+            <p class="muted">自动探测注册表 / 常见路径 → 读取游戏库、已安装清单、<code>localconfig.vdf</code> 的时长与隐私游戏。无需账号、无需 API Key、无需联网。</p>
+            <ul class="feat"><li>隐私 / 隐藏游戏也能统计</li><li>数据完全留在本机</li><li>本地封面图，零外链</li></ul>
+            <button class="btn primary" id="btnUseAuto">切换到自动模式</button>
+          </div>
+          <div class="card glass pad mode-card" id="manualCard">
+            <div class="mode-head"><span class="mode-no">02</span><h2>手动连接 Steam</h2><span class="tag">全库权威时长</span></div>
+            <p class="muted">填 Steam Web API Key + SteamID64，或直接粘贴 <code>GetOwnedGames</code> 的 JSON。用于补齐未安装游戏、跨设备库。</p>
+            <ul class="feat"><li>可覆盖本地时长（权威值）</li><li>私密资料可改用粘贴 JSON</li><li>本地隐私数据仍会自动合并</li></ul>
+            <button class="btn ghost" id="btnUseManual">切换到手动模式</button>
+          </div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>连接参数</h2><span class="tag" id="cfgModeTag">AUTO</span></div>
+          <div class="form-grid">
+            <label>Steam 根目录（留空 = 自动探测）<input id="cfgSteamPath" placeholder="例如 D:\360downloads\software\steam"></label>
+            <label>SteamID64<input id="cfgSteamId" placeholder="76561198…（自动模式会从 loginusers.vdf 读取）"></label>
+            <label>Steam Web API Key<input id="cfgApiKey" type="password" placeholder="https://steamcommunity.com/dev/apikey"></label>
+            <label>本地服务端口<input id="cfgPort" type="number" min="1024" max="65535" value="8787"></label>
+          </div>
+          <label class="full-label">粘贴 GetOwnedGames JSON（可选，替代 API Key）
+            <textarea id="cfgPasted" rows="3" placeholder='{"response":{"games":[{"appid":730,"name":"Counter-Strike 2","playtime_forever":3691}]}}'></textarea>
+          </label>
+          <div class="form-actions">
+            <button class="btn primary" id="btnSaveCfg">保存并重新扫描</button>
+            <span class="fine" id="cfgHint"></span>
+          </div>
+          <div id="detectedRoots" class="roots"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>配对 DeepSeek 电脑版 · MCP</h2><span class="tag">本地 STDIO</span></div>
+          <p class="muted">DeepSeek 官方桌面端目前没有开放插件接口。若你使用的客户端支持 MCP（自定义工具），把下面这段加入它的 MCP 配置即可让 AI 直接读取 Steam 数据；普通网页版可用「导出 / 交给 AI」里的复制报告方式。</p>
+          <div class="code-head"><span>mcpServers 配置</span><button class="btn tiny" id="btnCopyMcp">⧉ 复制配置</button></div>
+          <pre class="code" id="mcpCode"></pre>
+          <div class="tools-strip" id="mcpTools"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>本地 API 端点</h2><span class="tag">127.0.0.1  ONLY</span></div>
+          <div class="api-list" id="apiList"></div>
+        </div>
+
+        <div class="notice glass soft">
+          <div class="notice-icon">i</div>
+          <div><h2>口径与隐私声明</h2><p id="privacyStatement">—</p></div>
+        </div>
+      </section>
+
+      <!-- 浏览器扫描 -->
+      <section class="page" id="page-browser">
+        <div class="kpi-grid kpi-4" id="browserKpi"></div>
+
+        <div class="card glass pad" id="autoCruiseCard">
+          <div class="card-head"><h2>自动巡航</h2><span class="tag" id="autoCruiseTag">读取中…</span></div>
+          <p class="fine">打开后，软件会<b>自己</b>在已登录 Steam 的浏览器里依次打开需要的页面并自动更新：<b>我的游戏库、愿望单、购物车、好友在线、好友徽章、朋友的朋友、朋友的朋友的游戏库</b>。所有要提取 Steam 数据的地方都走这条自动通道，不用再手动开网页或粘贴采集脚本。全程只读，不会改动 Steam 上的任何内容。首次使用时若自动打开的浏览器还没登录，<b>登录一次 Steam 即可</b>。</p>
+          <div class="form-actions" style="align-items:center">
+            <label class="switch"><input type="checkbox" id="chkAutoCruise" checked><span></span><b>打开自动巡航</b></label>
+            <button class="btn ghost tiny" id="btnAutoCruiseRescan">↻ 立即重扫一轮</button>
+          </div>
+          <div class="sync-bar"><span id="autoCruiseDot" class="rb-dot"></span><span id="autoCruiseNote">正在读取自动巡航状态…</span></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>浏览器登录识别 · 每秒同步</h2><span class="tag" id="collectorTag">等待采集器</span></div>
+          <p class="fine">Steam 的实时登录状态不在本地文件里。点下面的按钮复制采集脚本，在<b>已登录 Steam 的浏览器</b>里按 F12 → 控制台粘贴回车（或存成书签点击）。脚本<b>每秒检查一次页面变化</b>，只把 appid + 名称发回本机 <code>127.0.0.1</code>，凭证一个字节都不出浏览器。</p>
+          <div class="form-actions">
+            <button class="btn primary" id="btnCopyCollector">⧉ 复制采集脚本</button>
+            <button class="btn ghost" id="btnCopyBookmark">⧉ 复制书签版</button>
+            <button class="btn ghost" id="btnOpenSteamStore">↗ 打开 Steam 商店</button>
+            <button class="btn ghost" id="btnBrowserClear">清空扫描结果</button>
+          </div>
+          <div class="form-grid" style="margin-top:14px">
+            <label>我的好友码（纯本地换算，不联网）
+              <div class="inline-row"><input id="bFriendCode" placeholder="例如 802626666"><button class="btn ghost" id="btnFriendCode">换算并扫描</button></div>
+            </label>
+            <label>换算出的 SteamID64<input id="bSteamId64" placeholder="自动换算" readonly></label>
+          </div>
+          <div class="sync-bar"><span id="syncDot" class="rb-dot"></span><span id="syncText">尚未收到采集器数据</span></div>
+          <div id="browserDetectList" class="mini-list"></div>
+        </div>
+
+        <div class="card glass pad" id="browserDebugCard">
+          <div class="card-head"><h2>实时识别 Steam 网页（调试模式）</h2><span class="tag" id="debugTag">未启用</span></div>
+          <p class="fine">想做到「<b>只要一打开 Steam 网页就识别到并自动导入数据</b>」，需要让 SteamLens 能读到浏览器当前标签页。点下面「调试模式打开 Steam」即可：它会用调试接口打开浏览器并登录一次，之后<b>每秒</b>检测是否打开了 Steam 页面，一旦发现就自动注入采集脚本把数据导回来。不需要手动跑脚本、凭证不出浏览器。</p>
+          <div class="form-actions">
+            <button class="btn primary" id="btnDebugLaunch">▶ 用调试模式打开 Steam（自动识别+导入）</button>
+            <span class="inline-row">
+              <input id="debugPort" placeholder="调试端口 9222" style="width:130px">
+              <button class="btn ghost" id="btnDebugAttach">连接已开调试的浏览器</button>
+            </span>
+            <button class="btn ghost" id="btnDebugDetach">断开</button>
+          </div>
+          <p class="fine" id="debugNote" style="margin-top:10px"></p>
+          <div id="debugTabs" class="mini-list" style="margin-top:8px"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>Steam 商店「已购买」权威清单</h2><span class="tag" id="verifiedTag">未校验</span></div>
+          <p class="fine" id="verifiedHint">采集器会读取 Steam 商店自己的 <code>/dynamicstore/userdata/</code>，其中 <code>rgOwnedApps</code> 是<b>当前真正买过且未退款</b>的游戏。拿到后库价值只统计这份清单，没买过的（愿望单、Demo、家庭共享）不再算钱。</p>
+          <div class="mini-list" id="verifiedSummary"></div>
+          <div class="form-actions"><button class="btn ghost" id="btnScanLibrary">↻ 立即重新扫描本机库</button></div>
+        </div>
+
+        <p class="fine">下面三栏是浏览器扫描实时提取的清单：<b>每款游戏都带封面图、游戏名、AppID</b>。<b>点任意一行</b>就能打开这款游戏的<b>玩法</b>与<b>我的成就</b>（已下载游戏显示本机解锁记录；愿望单 / 购物车 / 未下载游戏显示 Steam 商店公开成就）。</p>
+        <div class="grid-3">
+          <div class="card glass pad"><div class="card-head"><h2>游戏库 / 已拥有</h2><span class="tag" id="bOwnedTag">0</span></div><div id="browserOwned" class="mini-list scroll-list"></div></div>
+          <div class="card glass pad"><div class="card-head"><h2>愿望单</h2><span class="tag" id="bWishTag">0</span></div><div id="browserWishlist" class="mini-list scroll-list"></div></div>
+          <div class="card glass pad"><div class="card-head"><h2>购物车</h2><span class="tag" id="bCartTag">0</span></div><p class="fine" id="cartSourceNote" style="margin:-6px 0 8px">只显示购物车里的游戏，推荐位已排除</p><div id="browserCart" class="mini-list scroll-list"></div></div>
+        </div>
+      </section>
+
+      <!-- 个性化 / 动态壁纸 -->
+      <section class="page" id="page-wallpaper">
+        <div class="card glass pad">
+          <div class="card-head"><h2>🎞 动态壁纸 · 小红车 Wallpaper Engine</h2><span class="tag" id="wpStatusTag">读取中</span></div>
+          <p class="fine">自动读取你 Steam 库里 <b>Wallpaper Engine（小红车，AppID 431960）</b> 已订阅的壁纸，选一款就把它变成 SteamLens 的背景。<b>视频 / 网页 / 图片</b>壁纸能直接在软件里播放；<b>Scene（.pkg 场景）</b>是小红车专有格式，网页渲染不了，只能用预览图当静态背景。壁纸文件不会被复制、不会改动你的 Steam 订阅。</p>
+          <div class="form-actions">
+            <button class="btn primary" id="btnWpScan">↻ 重新扫描本机小红车</button>
+            <button class="btn ghost" id="btnWpOff">⏻ 关闭壁纸</button>
+            <button class="btn ghost" id="btnWpFocus">🫥 沉浸看壁纸</button>
+            <button class="btn ghost" id="btnWpTouch">✋ 触摸 / 互动模式</button>
+            <button class="btn ghost" id="btnWpCrisp">✨ 一键看清壁纸</button>
+            <button class="btn ghost" id="btnWpReset">↺ 恢复默认设置</button>
+            <label class="switch"><input type="checkbox" id="wpEnabled"><span></span><b>启用动态壁纸</b></label>
+            <label class="switch"><input type="checkbox" id="wpCrisp"><span></span><b>高清壁纸（不压暗 · 不模糊）</b></label>
+          </div>
+          <div class="form-grid wp-controls">
+            <label>界面不透明度（%）<input id="wpUi" type="range" min="0" max="100" value="22"></label>
+            <label>背景压暗（%）<input id="wpDim" type="range" min="0" max="80" value="35"></label>
+            <label>模糊（px）<input id="wpBlur" type="range" min="0" max="20" value="0"></label>
+            <label>音量（%）<input id="wpVolume" type="range" min="0" max="100" value="0"></label>
+            <label>填充方式<select id="wpFit" class="select"><option value="cover">铺满（裁切）</option><option value="contain">完整显示</option></select></label>
+          </div>
+          <p class="fine" id="wpUiHint">启用壁纸后界面自动变半透明。<b>高清壁纸</b>开启时不会给壁纸压暗、也不会模糊面板，看到的是原始清晰版本；点「✨ 一键看清壁纸」会直接把界面调到最透、压暗和模糊归零。<b>界面不透明度</b>拉到 0 是纯透明、100 恢复玻璃面板。想完全只看壁纸就点「沉浸看壁纸」，按 Esc 或点右下角按钮返回。<b>「✋ 触摸 / 互动模式」</b>只对<b>网页（HTML）壁纸</b>有效：开启后软件界面收起，鼠标、触摸和键盘会直接传给壁纸本身，可以点按钮、拖物件、和里面的角色互动；按 Esc 或点底部悬浮条返回。视频 / 图片壁纸没有可互动内容。</p>
+          <p class="fine" id="wpCurrent">当前：未启用</p>
+          <p class="fine" id="wpPathHint"></p>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>我下载的小红车壁纸（本机订阅）</h2><span class="tag" id="wpLocalTag">0 款</span></div>
+          <p class="fine">点封面或「设为壁纸」即可应用；视频壁纸默认静音循环播放，网页壁纸会加载它自己的 HTML（部分依赖小红车专有接口的效果可能不显示）。<b>⤓</b> 标记的是只能显示预览图的 Scene 场景。每张卡片右下角「🗑 从软件删除」只把壁纸移出本软件列表、<b>不删除小红车里的文件</b>，点上方「↻ 重新扫描本机小红车」会重新加载回来。</p>
+          <div id="wpList" class="wp-grid"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>Steam 创意工坊 · 下载到 SteamLens</h2><span class="tag" id="wpShopTag">官方公开接口</span></div>
+          <p class="fine">粘贴<b>小红车创意工坊链接或 ID</b>，SteamLens 会通过 Steam 官方公开接口读取标题、作者、订阅数，并把<b>预览素材下载到软件自己的目录</b>（<code>data/wallpapers/workshop/</code>），<b>不写进小红车、不改你的 Steam 订阅</b>。</p>
+          <p class="fine" style="color:var(--amber,#b5730f)"><b>先说明白：</b>Steam 对匿名程序通常不返回壁纸本体下载链接（<code>file_url</code> 为空），所以这类物品只能下载工坊预览图当静态背景。想用完整互动壁纸，请点「在 Steam 里订阅」，订阅完成后回到上面点「↻ 重新扫描本机小红车」，软件会自动读到。</p>
+          <div class="inline-row">
+            <input id="wpWorkshopInput" placeholder="https://steamcommunity.com/sharedfiles/filedetails/?id=… 或直接填 ID">
+            <button class="btn primary" id="btnWpLookup">⌕ 读取工坊信息</button>
+            <button class="btn ghost" id="btnWpDownload">↓ 下载到软件</button>
+          </div>
+          <div id="wpWorkshopResult" class="mini-list"></div>
+          <div class="card-head" style="margin-top:14px"><h2 style="font-size:12px">已下载到 SteamLens 的工坊物品</h2><span class="tag" id="wpDownloadedTag">0 款</span></div>
+          <div id="wpDownloaded" class="wp-grid"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>🌐 自定义网页壁纸（立刻可用）</h2><span class="tag">不依赖小红车</span></div>
+          <p class="fine">粘贴任意网页地址（在线壁纸网站、网页、嵌入视频页都行），或选一个本地 HTML 文件，<b>立刻</b>把它当成动态壁纸，无需 Steam 订阅。外部网页自带的声音照常播放；本机小红车网页壁纸还能被软件音量统一调节。</p>
+          <label>网页地址（URL）<input id="wpWebUrl" placeholder="https://example.com/live-wallpaper.html"></label>
+          <div class="form-actions">
+            <button class="btn primary" id="btnWpWebUrl">🌐 用这个网页做壁纸</button>
+            <span class="inline-row">
+              <button class="btn ghost" id="btnWpWebFile">📂 选本地 HTML 文件</button>
+              <input type="file" id="wpWebFile" accept=".html,.htm" hidden>
+            </span>
+            <button class="btn ghost" id="btnWpWebClear">清除自定义网页壁纸</button>
+          </div>
+          <div id="wpCustomList" class="wp-grid" style="margin-top:12px"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>🖼 我的照片壁纸（用小红车方式加载）</h2><span class="tag" id="photoWpTag">未设置</span></div>
+          <p class="fine">选一张自己的照片，SteamLens 会把它做成 <b>小红车 Wallpaper Engine 同款本地壁纸条目</b>（<code>project.json</code> + 完整原图），再由壁纸管线按<b>原始分辨率</b>加载 —— 不走缩略图、不转 data URL，所以不会像以前那样发虚、像素化。照片只保存在本机 <code>data/wallpapers/custom/</code>，不会写进你的 Steam 目录。</p>
+          <div class="form-actions">
+            <button class="btn ghost" id="btnPhotoPick">📂 选择照片</button>
+            <input type="file" id="photoWpFile" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif" hidden>
+            <button class="btn primary" id="btnPhotoApply">🖼 用这张照片做壁纸</button>
+            <button class="btn ghost" id="btnPhotoRemove">✕ 移除照片壁纸</button>
+          </div>
+          <div id="photoWpPreview" class="photo-wp-preview"></div>
+          <p class="fine" id="photoWpHint"></p>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>🎬 自定义开场动画（只能放视频）</h2><span class="tag" id="bootVideoTag">未启用</span></div>
+          <p class="fine">选一段本机视频当启动动画：<b>视频播完才会进入软件</b>，中途可以点一下或按 Esc 跳过。和开发者里的「软件启动视频」一样，只在打开 / 刷新软件时播一次。<b>如果开发者开场动画也开着，就只播开发者那个，这个会自动关掉。</b></p>
+          <div class="form-actions">
+            <button class="btn ghost" id="btnBootVideoPick">📂 选择视频</button>
+            <input type="file" id="bootVideoFile" accept="video/mp4,video/webm,video/ogg,video/*" hidden>
+            <label class="switch"><input type="checkbox" id="chkBootVideo"><span></span><b>启用自定义开场视频</b></label>
+            <button class="btn ghost" id="btnBootVideoPreview">▶ 立即预览一次</button>
+            <button class="btn ghost" id="btnBootVideoRemove">✕ 删除视频</button>
+          </div>
+          <p class="fine" id="bootVideoHint"></p>
+        </div>
+      </section>
+
+      <!-- 设置保存 -->
+      <section class="page" id="page-settings">
+        <div class="card glass pad">
+          <div class="card-head"><h2>设置永久保存</h2><span class="tag" id="settingsSavedTag">—</span></div>
+          <p class="fine">所有开关、输入框、下拉、主题、页签、筛选与排序<b>改动即自动保存</b>到本机 <code>data/ui-settings.json</code>，不需要再点「保存」。关掉窗口、重启服务、换浏览器重进都会原样恢复；凭证（API Key / 授权码 / 推送 Key）单独存在 <code>config.json</code>，同样长期有效。</p>
+          <div id="settingsInventory" class="mini-list"></div>
+          <div class="form-actions">
+            <button class="btn ghost" id="btnExportSettings">⇩ 导出设置备份</button>
+            <button class="btn ghost" id="btnImportSettings">⇧ 导入设置备份</button>
+            <button class="btn ghost" id="btnResetUi">↺ 恢复默认（白色外观）</button>
+          </div>
+          <input type="file" id="settingsFile" accept="application/json,.json" hidden>
+        </div>
+        <div class="card glass pad">
+          <div class="card-head"><h2>外观</h2><span class="tag">白色为默认</span></div>
+          <p class="fine">面板默认是<b>白色 / 浅色玻璃</b>。之前残留的深色测试值已自动清掉；如果哪天切成深色想换回来，点下面按钮即可，主题也会被记住。</p>
+          <div class="form-actions">
+            <button class="btn primary" id="btnWhiteTheme">☀ 恢复白色背景</button>
+            <button class="btn ghost" id="btnDarkTheme">☾ 切换深色</button>
+          </div>
+          <p class="fine" id="settingsHint">当前主题：白色</p>
+        </div>
+
+        <div class="card glass pad" id="cacheCard">
+          <div class="card-head"><h2>缓存管理 · 选择性删除</h2><span class="tag" id="cacheTotalTag">—</span></div>
+          <p class="fine">按块勾选，<b>只删你勾选的那一块</b>，不会一键清空。删除前会列出具体文件让你再确认一次；游戏详情缓存还可以展开<b>按单个游戏</b>删。标「谨慎」的块会写明删掉之后的影响。</p>
+          <div class="form-actions">
+            <button class="btn ghost" id="btnCacheRefresh">↻ 刷新列表</button>
+            <button class="btn ghost" id="btnCacheSelectNone">取消勾选</button>
+            <button class="btn danger" id="btnCacheDelete">✕ 删除选中的缓存块</button>
+          </div>
+          <div id="cacheBlockList" class="cache-blocks"></div>
+          <details class="cache-games" id="cacheGameDetails">
+            <summary>按游戏单独删除「玩法 / 成就」缓存 <span id="cacheGameCount" class="tag">0</span></summary>
+            <p class="fine">只删你勾选的那几款游戏，其余游戏的玩法和成就保持原样。删掉后下次点该游戏会重新从 Steam 本地文件读取成就、重新搜玩法。</p>
+            <div class="form-actions">
+              <button class="btn ghost" id="btnCacheGameNone">取消勾选</button>
+              <button class="btn danger" id="btnCacheDeleteGames">✕ 删除勾选的游戏详情</button>
+            </div>
+            <div id="cacheGameList" class="cache-game-list"></div>
+          </details>
+          <p class="fine" id="cacheHint">凭证（API Key、邮箱授权码、推送 Key）与账号资料不在可删除范围内。</p>
+        </div>
+
+        <div class="card glass pad offline-card" id="offlineCard">
+          <div class="card-head"><h2>离线模式 · 数据全存本机</h2><span class="status-pill" id="offlineStatusBadge"><i></i>检测中</span></div>
+          <p class="fine">服务器关掉也<b>照样能用</b>：直接双击 <code>index.html</code>（或桌面「SteamLens 离线版」快捷方式），面板会读取固化在你电脑上的真实数据，不依赖服务。你在离线时改的设置、标记、记录都会排队存在浏览器本机；<b>服务器重新打开后自动合并回在线版</b>，不会丢。</p>
+          <div id="offlineInventory" class="mini-list"></div>
+          <div class="form-actions">
+            <button class="btn primary" id="btnOfflineExport">⇩ 导出全部本机数据</button>
+            <button class="btn ghost" id="btnOfflineImport">⇧ 导入本机数据</button>
+            <button class="btn ghost" id="btnOfflineSync">↻ 立即同步到在线版</button>
+            <button class="btn ghost" id="btnOfflineSnapshot">◫ 立即固化快照</button>
+            <button class="btn primary" id="btnOfflineBuild">📦 导出离线版（含壁纸，打包到文件夹）</button>
+            <button class="btn ghost" id="btnOfflineOpen">📂 打开离线包文件夹</button>
+          </div>
+          <div class="offline-pack-box">
+            <p class="fine" id="offlinePackHint">离线版会把<b>动态壁纸本体一起打包</b>到 <code>SteamLens-离线版</code>：整个文件夹拷到任何电脑，双击里面的 <code>SteamLens-Offline.html</code> 就能看数据、<b>也能切换 / 删除 / 调壁纸</b>。当前在用的那款一定完整带上，其余按「体积从小到大」装进预算，装不下的离线时显示预览图。</p>
+            <label class="full-label">打包范围
+              <select id="offlinePackBudget">
+                <option value="300">精简 · 约 300 MB</option>
+                <option value="1200" selected>标准 · 约 1.2 GB（推荐）</option>
+                <option value="3000">加大 · 约 3 GB</option>
+                <option value="0">完整 · 全部壁纸（约 5.6 GB）</option>
+              </select>
+            </label>
+            <div id="offlinePackStat" class="mini-list"></div>
+          </div>
+          <input type="file" id="offlineFile" accept="application/json,.json" hidden>
+          <label class="full-label">离线随手记（同步后写进服务端 data/offline-notes.json）
+            <div class="inline-row"><input id="offlineNoteText" placeholder="记一条，服务恢复后自动合并"><button class="btn ghost" id="btnOfflineNote">记下</button></div>
+          </label>
+          <div id="offlineNotes" class="mini-list"></div>
+          <p class="fine" id="offlineHint">凭证（API Key / 授权码 / 推送 Key）不写进可直接打开的离线文件，只保留「已配置」标记。</p>
+        </div>
+
+        <!-- 开发者模式：永远保持在「设置保存」页的最下面。
+             默认收起，点按钮才展开信息；以后本页新增任何卡片，
+             pinDevModeLast() + MutationObserver 会自动把它重新挪到末尾。 -->
+        <div class="card glass pad dev-mode-card" id="devModeCard">
+          <div class="card-head">
+            <h2>🛠 开发者模式</h2>
+            <span class="tag">DEV</span>
+            <button class="btn ghost tiny" id="btnDevMode" style="margin-left:auto">点此展开 ›</button>
+          </div>
+          <div id="devModeInfo" hidden>
+            <div class="mini-list">
+              <div class="mini-item">
+                <div class="mi-main"><b>开发者</b><small>版本第六版</small></div>
+                <span class="mi-val">v6</span>
+              </div>
+            </div>
+            <p class="fine">开发者 · 版本第六版</p>
+
+            <!-- 作者语录：按作者原话记录，只在点开开发者模式后可见 -->
+            <div class="dev-quote" id="devAuthorQuote">
+              <div class="dev-quote-head">
+                <span class="dev-quote-mark">“</span>
+                <div class="dev-quote-title"><b>作者语录</b><small>AUTHOR'S NOTE · 原话记录</small></div>
+                <span class="tag">关于本软件</span>
+              </div>
+              <blockquote id="devQuoteLines">
+                <p class="dq-text">这是一款用来查看 Steam 游戏库、愿望单和好友动态的小工具。所有数据只保存在你自己的电脑上，不会上传到任何外部服务。</p>
+              </blockquote>
+              <div class="dev-quote-foot">— 作者 · SteamLens</div>
+            </div>
+
+            <!-- 启动页面：全软件唯一入口，就在这块展开后的开发者面板里。
+                 默认关闭；关闭时启动页 DOM 永远 hidden，软件启动时绝不出现。
+                 导航、快捷键、URL 参数、其它按钮都调用不到 playBootSplash。 -->
+            <div class="boot-dev-panel" id="bootDevPanel">
+              <div class="card-head">
+                <h2 style="font-size:12px">✦ 启动页面</h2>
+                <span class="tag" id="bootSplashState">未启用</span>
+              </div>
+              <p class="fine">高级开机动画 · 开发者模式 · 版本第六版。这是 <b>SteamLens 软件内「设置保存」页最下面的开发者模式</b>，与电脑系统或浏览器的开发者设置无关。<b>默认关闭</b>：不打开它，软件启动时不会出现任何启动页。<b>勾选开关只是设置</b>：当场不会播放；只有<b>软件开启（打开 / 刷新）时</b>才自动播放一次，关闭软件时不播放，也没有退出动画。想现在看效果就点「▶ 立即播放一次」（仅手动预览，不改变开机行为）。开关和预览按钮都只在这个面板里，软件其它任何位置都没有启动入口。</p>
+              <div class="inline-row" style="margin:10px 0 4px">
+                <label class="switch"><input type="checkbox" id="chkBootSplash"><span></span><b>启用开机启动页面</b></label>
+                <button class="btn ghost tiny" id="btnBootSplashPlay">▶ 立即播放一次</button>
+              </div>
+              <p class="fine" id="bootSplashHint">状态：未启用 · 软件启动时不会出现启动页面。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 更新：分钟级自动更新 + 一键更新 + 秒级日志 -->
+      <section class="page" id="page-updates">
+        <div class="card glass pad" id="updateCard">
+          <div class="card-head"><h2>更新</h2><span class="status-pill" id="updateStatusBadge"><i></i>检测中</span></div>
+          <p class="fine">软件<b>每一分钟自动更新一次</b>：重新读取好友与上线状态、Steam 账号、游戏库，并把最新数据固化到离线版。<b>如果某次自动更新没成功，按「一键更新」即可立刻重跑同一批更新</b>，不用重启。下面每一条日志都记着<b>精确到秒的时间</b>、每一小步的成功 / 失败与耗时；日志也每分钟刷新一次。所有记录只写在本机 <code>data/update-log.json</code>。</p>
+          <div class="update-summary">
+            <div><b id="updateLastTime">—</b><small>上次更新（精确到秒）</small></div>
+            <div><b id="updateNextTime">—</b><small>下次自动更新</small></div>
+            <div><b id="updateTotal">0</b><small>累计更新记录</small></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn primary" id="btnOneClickUpdate">⟳ 一键更新</button>
+            <button class="btn ghost" id="btnUpdateRefresh">↻ 刷新日志</button>
+          </div>
+          <div id="updateFailNote" class="diag-line update-fail" hidden></div>
+          <p class="fine" id="updateHint">每 60 秒自动更新并刷新日志；点击按钮会立即更新。</p>
+          <div id="updateLog" class="update-log"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-watch">
+        <div class="card glass pad">
+          <div class="card-head"><h2>浏览器扫描到的愿望单</h2><span class="tag" id="blWatchTag">0 款</span></div>
+          <p class="fine">在浏览器里打开 Steam 愿望单页后，这里会自动列出里面的游戏（<b>封面、游戏名、AppID</b> 齐全）。<b>点游戏行</b>可查看玩法与我的成就；点「＋ 加入监控」给它们单独设降价 / 折扣 / 正式上线提醒。</p>
+          <div class="form-actions"><button class="btn ghost tiny" id="btnBlWatchAddAll">＋ 全部加入监控</button></div>
+          <div id="blWatchList" class="mini-list scroll-list"></div>
+        </div>
+        <div class="card glass pad">
+          <div class="card-head"><h2>愿望单 · 添加要监控的 Steam 游戏</h2><span class="tag" id="watchSourceTag">本机库 + Steam 商店</span></div>
+          <p class="fine">把 Steam 里的游戏加进监控清单：<b>先看价格</b>（现价 / 原价 / 折扣 / 是否发售），再给每款单独设提醒线——<b>降到指定价格</b>、<b>折扣达到指定百分比</b>、或这款还是<b>测试版 / 未上线</b>时设「正式上线就通知我」。来源可以是<b>本机 Steam 游戏库</b>、<b>Steam 商店搜索</b>，也可以直接填 AppID。加进来之后服务<b>每分钟自动查一次</b>，触发提醒会走你已经开启的通知通道（Windows 通知 / 邮件 / 微信 / QQ / 钉钉），只发给你自己。</p>
+          <div class="inline-row watch-add-row">
+            <input id="watchSearchInput" placeholder="搜游戏名，或填 Steam AppID（本机库 + Steam 商店）" autocomplete="off">
+            <button class="btn primary" id="btnWatchSearch">⌕ 搜索</button>
+          </div>
+          <div class="inline-row watch-add-row">
+            <select id="watchLocalSelect" class="select"><option value="">从本机 Steam 游戏库选…</option></select>
+            <button class="btn ghost" id="btnWatchAddLocal">加入监控</button>
+            <input id="watchAppidInput" placeholder="或直接填 AppID" autocomplete="off">
+            <button class="btn ghost" id="btnWatchAddAppid">按 AppID 加入</button>
+          </div>
+          <p class="fine" id="watchSearchNote"></p>
+          <div id="watchSearchResults" class="mini-list"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>我的监控清单</h2><span class="tag" id="watchTag">0 款</span></div>
+          <p class="fine">每款游戏都有 <b>✕ 不再提醒</b>：点一下这款游戏就不再发降价 / 折扣 / 上线通知，并删掉它已有的提醒记录，游戏仍留在清单里；再点「↺ 恢复提醒」可重新开启。「移除清单」才是彻底删掉这款游戏。</p>
+          <div class="form-actions">
+            <button class="btn primary tiny" id="btnWatchCheck">⟳ 立即检查价格与上线状态</button>
+            <button class="btn ghost tiny" id="btnWatchImportOwned">＋ 批量加入本机已拥有的游戏</button>
+            <label class="switch"><input type="checkbox" id="watchAuto" checked><span></span><b>自动运行（每分钟）</b></label>
+            <span class="fine" id="watchLastCheck">—</span>
+          </div>
+          <div id="watchList" class="watch-list"></div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="card-head"><h2>提醒记录</h2><span class="tag" id="watchAlertTag">0 条</span></div>
+          <div id="watchAlerts" class="mini-list"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-syscheck">
+        <div class="card glass pad">
+          <div class="card-head"><h2>系统对比 · 我的电脑能否运行这游戏</h2><span class="tag" id="sysPcTag">检测中…</span></div>
+          <p class="fine">搜任意 Steam 游戏，自动把它的<b>最低 / 推荐配置</b>和<b>你电脑的真实配置</b>逐项对比，直接告诉你<b>能不能玩</b>。和愿望单一样能直接搜 Steam 全部游戏，也能直接填 AppID。其中 CPU / 显卡只做型号级别的粗略估算，最终以实际游玩为准。</p>
+          <div class="inline-row watch-add-row">
+            <input id="sysSearchInput" placeholder="搜游戏名，或填 Steam AppID（本机库 + Steam 商店）" autocomplete="off">
+            <button class="btn primary" id="btnSysSearch">⌕ 搜索</button>
+          </div>
+          <p class="fine" id="sysSearchNote"></p>
+          <div id="sysPcBox" class="sys-pc-box"></div>
+          <div class="form-actions">
+            <button class="btn ghost tiny" id="btnSysDetect">🔍 重新检测我的电脑</button>
+            <span class="fine" id="sysPcAt"></span>
+          </div>
+        </div>
+        <div class="card glass pad">
+          <div class="card-head"><h2>搜索结果 · 点「对比」看能否运行</h2><span class="tag" id="sysResultTag">0 款</span></div>
+          <div class="form-actions" style="margin:2px 0 10px">
+            <button class="btn ghost tiny" id="btnSysCompareAll" disabled>🔄 重新对比</button>
+          </div>
+          <div id="sysResults" class="mini-list"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-family">
+        <h2 class="page-h">👪 识别家庭</h2>
+        <p class="fine">识别你所在的 Steam 共享家庭（Steam Family），列出全部家庭成员、每位成员的库与估值，并合并整个家庭的共享游戏总价值。家庭有人加入 / 退出、共享库新增游戏时，自动通知你。</p>
+
+        <div class="card glass pad">
+          <h3 class="sec-h">🔑 Steam 家庭访问令牌</h3>
+          <p class="fine">Steam 家庭接口属于隐私数据，需要「家庭访问令牌 access_token」（不是 Web API Key）。获取方法：先登录 <b>store.steampowered.com</b>，再打开
+            <code>https://store.steampowered.com/pointssummary/ajaxgetasyncconfig</code>，复制返回 JSON 里的 <code>webapi_token</code> 值粘贴到下面即可。令牌只存本机。</p>
+          <div class="row-between">
+            <input id="famAccessToken" class="input" type="password" placeholder="粘贴 webapi_token …" style="flex:1;min-width:220px" />
+            <button class="btn ghost tiny" id="btnFamSaveToken">保存令牌</button>
+          </div>
+          <div id="familyTokenStatus" class="fine" style="margin-top:6px">尚未保存令牌</div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="row-between">
+            <div>
+              <button class="btn primary" id="btnFamilyScan">🔄 立即识别家庭</button>
+              <span id="familyScanStatus" class="tag" style="margin-left:8px">尚未识别</span>
+            </div>
+            <div class="fine" id="familyLastScan"></div>
+          </div>
+        </div>
+
+        <div id="familySummary" class="family-summary"></div>
+
+        <div class="card glass pad">
+          <h3 class="sec-h">👤 家庭成员（<span id="familyMemberCount">0</span>）</h3>
+          <div id="familyMembers" class="family-members"></div>
+          <div id="familyMembersEmpty" class="mini-empty" hidden>还没有识别记录。点上方「立即识别家庭」。</div>
+        </div>
+
+        <div class="card glass pad">
+          <div class="row-between">
+            <h3 class="sec-h">🎮 家庭共享游戏库（<span id="familyGameCount">0</span> 款）</h3>
+            <input id="familyGameSearch" class="input" placeholder="搜索游戏名…" style="width:200px" />
+          </div>
+          <div id="familyLibrary" class="family-library"></div>
+          <div id="familyLibraryEmpty" class="mini-empty" hidden>还没有识别记录。</div>
+        </div>
+
+        <div class="card glass pad">
+          <h3 class="sec-h">🔔 家庭动态通知</h3>
+          <p class="fine">需要先在「通知与邮箱」里开启通知总开关并设置好推送渠道（桌面弹窗 / 邮箱 / 微信 / QQ / 钉钉 / Webhook），下面的细分开关才会真正发出提醒。这里只控制「家庭相关」的三类事件。</p>
+          <label class="switch"><input type="checkbox" id="famNotifyJoined"><span></span><b>成员加入提醒</b><small>有人加入家庭时通知我</small></label>
+          <label class="switch"><input type="checkbox" id="famNotifyLeft"><span></span><b>成员退出提醒</b><small>有人退出家庭时通知我</small></label>
+          <label class="switch"><input type="checkbox" id="famNotifyNew"><span></span><b>共享库新增游戏提醒</b><small>家庭共享库出现新游戏时通知我</small></label>
+          <button class="btn ghost tiny" id="btnFamSaveNotify" style="margin-top:8px">保存通知设置</button>
+          <h4 class="sec-h" style="margin-top:16px">📜 家庭动态记录</h4>
+          <div id="familyEvents" class="mini-list"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal hidden" id="modal">
+  <div class="modal-card glass">
+    <div class="card-head"><h2 id="modalTitle">编辑游戏</h2><button class="icon-btn" id="btnCloseModal">✕</button></div>
+    <div class="form-grid" id="modalForm"></div>
+    <p class="fine">手动值优先级最高，会覆盖本地与 API 读数，并保存在本机 data/overrides.json。</p>
+    <div class="form-actions"><button class="btn primary" id="btnSaveOverride">保存</button><button class="btn ghost" id="btnCancelModal">取消</button></div>
+  </div>
+</div>
+
+<!-- 点任意一条游玩记录：这一天玩了多久（天 / 小时 / 分钟 / 秒） -->
+<div class="modal hidden" id="ptDayModal">
+  <div class="modal-card glass" style="width:min(420px,100%)">
+    <div class="card-head"><h2>这一天玩了多久</h2><button class="icon-btn" id="btnPtDayClose">✕</button></div>
+    <div id="ptDayBody"></div>
+  </div>
+</div>
+
+<!-- 只删软件上的好友：以 Steam 好友名单为准，绝不动 Steam 好友关系 -->
+<div class="modal hidden" id="friendCleanModal">
+  <div class="modal-card glass" style="width:min(640px,100%)">
+    <div class="card-head"><h2>删掉软件里的好友</h2><button class="icon-btn" id="btnFriendCleanClose">✕</button></div>
+    <div id="friendCleanBody" class="fc-body"></div>
+    <div class="form-actions">
+      <button class="btn warn" id="btnFriendCleanApply">删除选中的好友</button>
+      <button class="btn ghost" id="btnFriendCleanAll">一键删掉所有非 Steam 好友</button>
+      <button class="btn ghost" id="btnFriendCleanRestore">恢复已删好友</button>
+    </div>
+    <p class="fine"><b>只删 SteamLens 软件里显示的好友记录</b>，绝不删除或取消 Steam 上的好友关系；删除后随时可以在这里恢复。</p>
+  </div>
+</div>
+
+<!-- 点击「好友上线」里的好友：他的朋友的朋友 / 那些人的库中游戏 / Steam 徽章 · 每秒更新 -->
+<div class="modal-mask" id="friendPopupMask" hidden>
+  <div class="modal glass fn-pop" role="dialog" aria-modal="true" aria-label="好友关系与徽章">
+    <div class="card-head">
+      <h2 id="fnTitle">好友详情</h2>
+      <span class="tag" id="fnLiveTag">每秒更新</span>
+      <button class="icon-btn" id="btnFnClose">✕</button>
+    </div>
+    <div class="fn-body">
+      <div class="fn-sec">
+        <div class="fn-sec-head"><h3>🏅 他在 Steam 里的徽章</h3><span class="tag" id="fnBadgeTag">—</span></div>
+        <div id="fnBadges" class="fn-badges"></div>
+        <div class="form-actions" style="margin-top:8px">
+          <button class="btn ghost tiny" id="btnFnBadgeOpen">↗ 打开他的徽章页（自动采集）</button>
+          <a class="btn ghost tiny" id="fnBadgeLink" href="#" target="_blank" rel="noopener">手动打开 ↗</a>
+        </div>
+      </div>
+      <div class="fn-sec">
+        <div class="fn-sec-head"><h3>👥 他朋友的朋友</h3><span class="tag" id="fnFofTag">0 人</span></div>
+        <div class="form-actions" style="margin-bottom:8px">
+          <button class="btn ghost tiny" id="btnFnFofOpen">🔄 立刻重扫这位（平时会自动扫描）</button>
+        </div>
+        <div id="fnFof" class="fn-fof"></div>
+      </div>
+      <div class="fn-sec">
+        <div class="fn-sec-head"><h3>🎮 他的库中游戏</h3><span class="tag" id="fnOwnTag">0 款</span></div>
+        <div id="fnOwn" class="fn-games"></div>
+      </div>
+      <p class="fine" id="fnNote"></p>
+    </div>
+  </div>
+</div>
+
+<!-- 游戏详情弹窗：玩法 + 成就 -->
+<div class="modal-mask" id="gameDetailMask" hidden>
+  <div class="modal game-detail-modal" id="gameDetailModal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="gameDetailClose" aria-label="关闭">×</button>
+    <div class="gd-head">
+      <img id="gdCover" class="gd-cover" alt="" onerror="this.style.visibility='hidden'">
+      <div class="gd-titles">
+        <h3 id="gdName">游戏详情</h3>
+        <small id="gdAppid" class="mono"></small>
+        <div class="gd-tags"><span id="gdSource" class="tag"></span><span id="gdOwner" class="tag gd-owner" hidden></span></div>
+      </div>
+    </div>
+    <div class="gd-section">
+      <h4>玩法 <span class="gd-summary">≤100 字 · 永久保存</span></h4>
+      <p id="gdGameplay" class="gd-text">—</p>
+      <p class="gd-sub" id="gdGameplaySub"></p>
+    </div>
+    <div class="gd-section">
+      <h4 class="gd-ach-head">成就<span class="gd-summary">—</span></h4>
+      <div class="gd-ach-tools">
+        <button class="btn ghost tiny" id="btnGdRefreshAch" hidden>⟳ 重新从 Steam 读取</button>
+        <span class="fine" id="gdAchHint"></span>
+      </div>
+      <p class="gd-sub" id="gdAchSub"></p>
+      <div id="gdAchievements" class="gd-ach-list"><div class="mini-empty">加载中…</div></div>
+    </div>
+    <div class="gd-section" id="gdSysreqSection">
+      <h4>系统需求 <span class="gd-summary">最低 / 推荐 · 自动对比我的电脑</span></h4>
+      <div class="gd-sysreq-verdict" id="gdSysreqVerdict"><span class="fine">点开即自动检测你的电脑配置并对比…</span></div>
+      <div class="gd-sysreq-cols">
+        <div class="gd-req-col">
+          <div class="gd-req-title">最低配置</div>
+          <ul class="gd-req-list" id="gdReqMin"><li class="fine">—</li></ul>
+        </div>
+        <div class="gd-req-col">
+          <div class="gd-req-title">推荐配置</div>
+          <ul class="gd-req-list" id="gdReqRec"><li class="fine">—</li></ul>
+        </div>
+      </div>
+      <div class="gd-sysreq-compare" id="gdSysreqCompare"></div>
+      <div class="gd-sysreq-tools">
+        <button class="btn ghost tiny" id="btnGdDetect">🔍 检测我的电脑并对比</button>
+        <span class="fine" id="gdSysreqPc"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 账号切换弹窗：点左上角头像弹出，保存的账号都在这里切换 -->
+<div class="ac-switch-pop" id="accountSwitchPop" hidden>
+  <div class="ac-pop-head"><b>切换账号</b><span class="fine">已保存的账号都在这里，点「切换」即可换；数据存在本机缓存</span></div>
+  <div class="ac-pop-list" id="accountPopList"></div>
+  <div class="ac-pop-foot">
+    <button class="btn ghost tiny" id="btnAddCurrentToVault">＋ 把当前账号加入保险库</button>
+    <span class="fine" id="accountPopHint"></span>
+  </div>
+</div>
+
+<!-- 开发者启动页面：默认 hidden，只有软件内「开发者模式」面板能开启 / 播放。
+     它是全屏覆盖层，不依赖任何页面数据，也不提供导航、快捷键或 URL 入口。 -->
+<div id="bootSplash" class="boot-splash" hidden aria-hidden="true">
+  <div class="bs-bg" aria-hidden="true">
+    <div class="bs-grid"></div>
+    <div class="bs-glow bs-glow-a"></div>
+    <div class="bs-glow bs-glow-b"></div>
+    <div class="bs-beam"></div>
+  </div>
+  <span class="bs-corner bs-c-tl"></span><span class="bs-corner bs-c-tr"></span>
+  <span class="bs-corner bs-c-bl"></span><span class="bs-corner bs-c-br"></span>
+  <div class="bs-top"><span>SL / v6</span><span>LOCAL · 127.0.0.1</span></div>
+
+  <div class="bs-core">
+    <div class="bs-logo">
+      <svg class="bs-svg" viewBox="0 0 160 160" width="132" height="132" aria-hidden="true">
+        <defs>
+          <linearGradient id="bsGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#6fa8ff"/><stop offset=".5" stop-color="#9b8cff"/><stop offset="1" stop-color="#43e0c8"/>
+          </linearGradient>
+          <radialGradient id="bsCore" cx=".38" cy=".32" r=".72">
+            <stop offset="0" stop-color="#ffffff"/><stop offset=".38" stop-color="#a9d0ff"/><stop offset="1" stop-color="#2f6df6"/>
+          </radialGradient>
+        </defs>
+        <circle class="bs-ticks" cx="80" cy="80" r="73" fill="none" stroke="rgba(165,195,255,.22)" stroke-width="1" stroke-dasharray="1 7"/>
+        <circle class="bs-ring-out" cx="80" cy="80" r="62" fill="none" stroke="url(#bsGrad)" stroke-width="1.6" stroke-linecap="round"/>
+        <circle class="bs-halo" cx="80" cy="80" r="62" fill="none" stroke="rgba(120,170,255,.16)" stroke-width="9"/>
+        <circle class="bs-ring-mid" cx="80" cy="80" r="43" fill="none" stroke="rgba(160,195,255,.36)" stroke-width="1.1"/>
+        <circle class="bs-ring-in" cx="80" cy="80" r="26" fill="none" stroke="url(#bsGrad)" stroke-width="2.4" stroke-linecap="round"/>
+        <circle class="bs-pupil" cx="80" cy="80" r="12" fill="url(#bsCore)"/>
+        <path class="bs-handle" d="M113 47 L130 30" stroke="url(#bsGrad)" stroke-width="4" stroke-linecap="round"/>
+        <circle class="bs-node" cx="80" cy="18" r="2.2" fill="#8fd8ff"/>
+        <circle class="bs-node" cx="142" cy="80" r="2.2" fill="#8fd8ff"/>
+        <circle class="bs-node" cx="80" cy="142" r="2.2" fill="#8fd8ff"/>
+        <circle class="bs-node" cx="18" cy="80" r="2.2" fill="#8fd8ff"/>
+      </svg>
+      <div class="bs-scan"></div>
+    </div>
+    <div class="bs-word">SteamLens</div>
+    <div class="bs-sub">S T E A M &nbsp;·&nbsp; L E N S</div>
+    <div class="bs-build">STEAMLENS &nbsp;·&nbsp; BUILD 06 &nbsp;·&nbsp; 版本第六版</div>
+  </div>
+
+  <div class="bs-bottom">
+    <div class="bs-line">
+      <div class="bs-status"><span class="bs-dot"></span><span id="bsStatusText">正在建立本机通道</span></div>
+      <div class="bs-track"><i id="bsBar"></i></div>
+      <div class="bs-pct" id="bsPct">000</div>
+    </div>
+    <div class="bs-foot"><span>STEAMLENS · LOCAL ANALYTICS</span><span>DEVELOPER MODE ONLY</span></div>
+  </div>
+</div>
+
+<!-- 个性化自定义开场视频：只能放视频，ended 之后才真正进入软件。
+     和开发者启动页互斥，优先级由 app.js 的 boot() 统一判断。 -->
+<div id="personalBootVideo" class="pb-video" hidden aria-hidden="true">
+  <video id="pbVideo" playsinline preload="auto"></video>
+  <div class="pb-skip" id="pbSkip">点击任意处跳过 · Esc</div>
+</div>
+
+<!-- 真开发者模式：隐藏入口。界面上没有任何按钮、提示或光标变化，
+     只有连点「设置保存 → 开发者模式 → 作者语录」三次才会出现。默认 hidden。 -->
+<div id="slRealDev" class="sl-realdev" hidden aria-hidden="true">
+  <div class="rd-shell">
+    <div class="rd-head">
+      <div>
+        <span class="rd-kicker">STEAMLENS · AUTHOR'S WORDS</span>
+        <h2>真开发者模式</h2>
+      </div>
+      <button class="btn ghost tiny" id="btnRealDevClose">关闭 ✕</button>
+    </div>
+    <div class="rd-words" id="rdWords"></div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
